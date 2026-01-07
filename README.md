@@ -6,7 +6,7 @@ Eine moderne, selbst-gehostete Privatbuchhaltungs-Lösung für die Schweiz mit d
 
 ### Core Features
 - 📊 **Multi-Account Management** - Giro, Sparkonto, Kreditkarte, Bargeld
-- 💳 **Schweizer Bank-Import** - CSV Import für PostFinance, UBS, Raiffeisen, ZKB
+- 💳 **Schweizer Bank-Import** - CSV Import für PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank
 - 📄 **Rechnungsverwaltung** - PDFs direkt an Transaktionen anhängen
 - 🔍 **OCR für Belege** - Automatische Extraktion von Betrag, Datum, Beschreibung
 - 📈 **Reports & Budgets** - Visualisierung deiner Finanzen
@@ -30,7 +30,7 @@ Eine moderne, selbst-gehostete Privatbuchhaltungs-Lösung für die Schweiz mit d
 
 ### Bank Integration 🏦
 - 📥 **CSV Import mit Auto-Matching** - System findet automatisch das richtige Konto!
-- 🏦 **5 Schweizer Banken** - PostFinance, UBS, Raiffeisen, ZKB, Credit Suisse
+- 🏦 **8 Schweizer Banken** - PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank, Credit Suisse
 - 🔍 **IBAN-basiertes Matching** - Einmal konfigurieren, immer automatisch
 - 🚫 **Duplicate Detection** - Keine doppelten Transaktionen
 - 🔴 **Import Confirmation** - Alle Imports rot markiert für Review

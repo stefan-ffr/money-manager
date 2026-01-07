@@ -193,7 +193,7 @@ with open('bank_export.csv', 'rb') as f:
     print(response.json())
 ```
 
-**Unterstützte Banken:** PostFinance, UBS, Raiffeisen, ZKB, Credit Suisse
+**Unterstützte Banken:** PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank, Credit Suisse
 ```
 
 ## 9. Backup

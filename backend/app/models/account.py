@@ -17,7 +17,7 @@ class Account(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Bank Integration
-    bank_name = Column(String(100), nullable=True)  # "PostFinance", "UBS", "Raiffeisen"
+    bank_name = Column(String(100), nullable=True)  # "PostFinance", "UBS", "Raiffeisen", "ZKB", "BLKB", "BKB", "Migros Bank"
     bank_identifier = Column(String(100), nullable=True)  # IBAN oder Account Number für Matching
     bank_import_enabled = Column(Boolean, default=False)  # Auto-Import aktiviert?
     last_import_date = Column(DateTime, nullable=True)  # Letzter erfolgreicher Import

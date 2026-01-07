@@ -24,7 +24,7 @@
 
 ### 🏦 Bank Integration
 ```
-✅ CSV Import für 5 Schweizer Banken (PostFinance, UBS, Raiffeisen, ZKB, CS)
+✅ CSV Import für 8 Schweizer Banken (PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank, CS)
 ✅ Automatisches Konto-Matching via IBAN
 ✅ Duplicate Detection
 ✅ Alle Imports rot markiert für Review

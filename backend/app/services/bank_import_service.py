@@ -1,6 +1,6 @@
 """
 Bank Import Service - CSV Import mit Auto-Account-Matching
-Unterstützt PostFinance, UBS, Raiffeisen, ZKB und weitere Schweizer Banken
+Unterstützt PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank und weitere Schweizer Banken
 """
 
 from typing import List, Optional, Dict
@@ -47,7 +47,19 @@ class BankImportService:
         # Credit Suisse
         if 'booking date' in header and 'credit/debit' in header:
             return 'credit_suisse'
-        
+
+        # BLKB (Basellandschaftliche Kantonalbank)
+        if 'valutadatum' in header and 'auftraggeber' in header:
+            return 'blkb'
+
+        # BKB (Basler Kantonalbank)
+        if 'buchungstext' in header and 'belastung chf' in header:
+            return 'bkb'
+
+        # Migros Bank
+        if 'transaktionsdatum' in header and 'belastung' in header and 'migros' in csv_content.lower()[:500]:
+            return 'migros'
+
         return None
     
     def extract_account_identifier(self, csv_content: str, bank: str) -> Optional[str]:
@@ -172,16 +184,16 @@ class BankImportService:
         """Parse ZKB (Zürcher Kantonalbank) CSV Format"""
         transactions = []
         reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
-        
+
         for row in reader:
             try:
                 date = datetime.strptime(row['Wertstellung'], '%d.%m.%Y').date()
-                
+
                 # ZKB: Belastung (negative) oder Gutschrift (positive)
                 amount = Decimal(row.get('Gutschrift', '0').replace("'", ""))
                 if not amount:
                     amount = -Decimal(row.get('Belastung', '0').replace("'", ""))
-                
+
                 transactions.append({
                     'date': date,
                     'amount': amount,
@@ -190,7 +202,115 @@ class BankImportService:
                 })
             except Exception as e:
                 continue
-        
+
+        return transactions
+
+    def parse_blkb(self, csv_content: str) -> List[Dict]:
+        """Parse BLKB (Basellandschaftliche Kantonalbank) CSV Format"""
+        transactions = []
+        reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
+
+        for row in reader:
+            try:
+                # BLKB Format:
+                # Valutadatum;Buchungsdatum;Auftraggeber;Begünstigter;Mitteilung;Belastung;Gutschrift;Saldo
+                date = datetime.strptime(row['Valutadatum'], '%d.%m.%Y').date()
+
+                # Belastung (negative) oder Gutschrift (positive)
+                amount_str = row.get('Gutschrift', '0').replace("'", "").replace("'", "").strip()
+                if amount_str and amount_str != '0' and amount_str != '':
+                    amount = Decimal(amount_str)
+                else:
+                    belastung = row.get('Belastung', '0').replace("'", "").replace("'", "").strip()
+                    amount = -Decimal(belastung) if belastung and belastung != '0' and belastung != '' else Decimal('0')
+
+                # Description from Mitteilung or Auftraggeber/Begünstigter
+                description = row.get('Mitteilung', '') or row.get('Auftraggeber', '') or row.get('Begünstigter', '')
+
+                transactions.append({
+                    'date': date,
+                    'amount': amount,
+                    'description': description.strip(),
+                    'balance': Decimal(row['Saldo'].replace("'", "")) if row.get('Saldo') else None
+                })
+            except Exception as e:
+                print(f"Error parsing BLKB row: {e}")
+                continue
+
+        return transactions
+
+    def parse_bkb(self, csv_content: str) -> List[Dict]:
+        """Parse BKB (Basler Kantonalbank) CSV Format"""
+        transactions = []
+        reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
+
+        for row in reader:
+            try:
+                # BKB Format:
+                # Datum;Buchungstext;Belastung CHF;Gutschrift CHF;Valuta;Saldo CHF
+                date_str = row.get('Datum') or row.get('Valuta')
+                date = datetime.strptime(date_str, '%d.%m.%Y').date()
+
+                # Belastung CHF (negative) oder Gutschrift CHF (positive)
+                gutschrift = row.get('Gutschrift CHF', '0').replace("'", "").replace("'", "").strip()
+                if gutschrift and gutschrift != '0' and gutschrift != '':
+                    amount = Decimal(gutschrift)
+                else:
+                    belastung = row.get('Belastung CHF', '0').replace("'", "").replace("'", "").strip()
+                    amount = -Decimal(belastung) if belastung and belastung != '0' and belastung != '' else Decimal('0')
+
+                description = row.get('Buchungstext', '').strip()
+
+                saldo_str = row.get('Saldo CHF', '').replace("'", "").strip()
+                balance = Decimal(saldo_str) if saldo_str and saldo_str != '' else None
+
+                transactions.append({
+                    'date': date,
+                    'amount': amount,
+                    'description': description,
+                    'balance': balance
+                })
+            except Exception as e:
+                print(f"Error parsing BKB row: {e}")
+                continue
+
+        return transactions
+
+    def parse_migros(self, csv_content: str) -> List[Dict]:
+        """Parse Migros Bank CSV Format"""
+        transactions = []
+        reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
+
+        for row in reader:
+            try:
+                # Migros Bank Format:
+                # Transaktionsdatum;Buchungsdatum;Beschreibung;Belastung;Gutschrift;Saldo
+                date_str = row.get('Transaktionsdatum') or row.get('Buchungsdatum')
+                date = datetime.strptime(date_str, '%d.%m.%Y').date()
+
+                # Belastung (negative) oder Gutschrift (positive)
+                gutschrift = row.get('Gutschrift', '0').replace("'", "").replace("'", "").strip()
+                if gutschrift and gutschrift != '0' and gutschrift != '':
+                    amount = Decimal(gutschrift)
+                else:
+                    belastung = row.get('Belastung', '0').replace("'", "").replace("'", "").strip()
+                    amount = -Decimal(belastung) if belastung and belastung != '0' and belastung != '' else Decimal('0')
+
+                description = row.get('Beschreibung', '').strip()
+
+                saldo_str = row.get('Saldo', '').replace("'", "").strip()
+                balance = Decimal(saldo_str) if saldo_str and saldo_str != '' else None
+
+                transactions.append({
+                    'date': date,
+                    'amount': amount,
+                    'description': description,
+                    'balance': balance
+                })
+            except Exception as e:
+                print(f"Error parsing Migros Bank row: {e}")
+                continue
+
         return transactions
     
     def import_csv(
@@ -216,7 +336,7 @@ class BankImportService:
             return {
                 'success': False,
                 'error': 'Unknown bank format',
-                'supported_banks': ['postfinance', 'ubs', 'raiffeisen', 'zkb', 'credit_suisse']
+                'supported_banks': ['postfinance', 'ubs', 'raiffeisen', 'zkb', 'blkb', 'bkb', 'migros', 'credit_suisse']
             }
         
         # Auto-match account wenn nicht gegeben
@@ -242,6 +362,9 @@ class BankImportService:
             'ubs': self.parse_ubs,
             'raiffeisen': self.parse_raiffeisen,
             'zkb': self.parse_zkb,
+            'blkb': self.parse_blkb,
+            'bkb': self.parse_bkb,
+            'migros': self.parse_migros,
         }
         
         parser = parser_map.get(bank)

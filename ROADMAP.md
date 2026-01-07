@@ -18,7 +18,7 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 
 ### Bank Integration 🆕
 - [x] **CSV Import mit Auto-Matching** - System findet automatisch richtiges Konto
-- [x] **5 Schweizer Banken** - PostFinance, UBS, Raiffeisen, ZKB, Credit Suisse
+- [x] **8 Schweizer Banken** - PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank, Credit Suisse
 - [x] **IBAN-based Matching** - Konto einmal markieren, immer automatisch
 - [x] **Duplicate Detection** - Keine doppelten Einträge
 - [x] **Bank Import API** - Vollständig über API steuerbar

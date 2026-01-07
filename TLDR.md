@@ -12,7 +12,7 @@
 ```
 ✅ 69 Files, 13 Dokumentationen
 ✅ 15+ Währungen (CHF, EUR, USD, THB, BTC...)
-✅ 5 Schweizer Banken (PostFinance, UBS, Raiffeisen, ZKB, CS)
+✅ 8 Schweizer Banken (PostFinance, UBS, Raiffeisen, ZKB, BLKB, BKB, Migros Bank, CS)
 ✅ RSA-verschlüsselte Federation
 ✅ Telegram Bot mit OCR
 ✅ Docker-ready
