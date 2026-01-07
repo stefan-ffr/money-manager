@@ -209,6 +209,39 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 
 ## 📊 v1.2 - Bank Integration (Q2 2025)
 
+### Bank Reconciliation ✅ IMPLEMENTIERT
+- [x] Reconciliation Models
+  - [x] BankReconciliation Model (Sessions tracking)
+  - [x] ReconciliationMatch Model (Individual matches)
+  - [x] Relationship with Account and Transaction
+- [x] Matching Algorithm
+  - [x] Exact Match (100% confidence)
+  - [x] Fuzzy Match (date ±2 days, amount exact, description similarity)
+  - [x] Unmatched Detection (bank only, app only)
+- [x] API Endpoints
+  - [x] CSV Upload & Parse
+  - [x] Automatic Matching
+  - [x] Manual Resolution Actions
+  - [x] Reconciliation History
+- [x] Frontend UI
+  - [x] CSV Upload Form
+  - [x] Visual Comparison (Bank vs App side-by-side)
+  - [x] Ampel-System (🟢 90%+, 🟡 70-90%, 🔴 <70%)
+  - [x] Manual Actions (Accept, Create Transaction, Ignore)
+  - [x] Balance Comparison
+  - [x] Statistics Dashboard
+
+**Priority:** HIGH
+**Reason:** Essential for accuracy verification
+**Status:** ✅ Vollständig implementiert (2025-01-07)
+**Details:**
+- Intelligenter Matching-Algorithmus (Date, Amount, Description)
+- Visuelle Gegenüberstellung mit Confidence-Indikatoren
+- Manuelle Editierbarkeit für alle Matches
+- Unterstützt alle CH Bank CSV Formate via existing parsers
+- Balance-Abgleich zwischen Bank und App
+- Audit Trail für alle Reconciliations
+
 ### ISO 20022 Parser
 - [ ] camt.053 (Account Statement) Parser
   - [ ] XML Parsing

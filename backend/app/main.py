@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication
+from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation
 from app.core.database import engine, SessionLocal
 from app.models import base
 
@@ -35,6 +35,7 @@ app.include_router(federation.router, prefix="/api/v1/federation", tags=["federa
 app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(bank_import.router, prefix="/api/v1/import", tags=["bank-import"])
 app.include_router(replication.router, prefix="/api/v1/replication", tags=["replication"])
+app.include_router(reconciliation.router, prefix="/api/v1", tags=["reconciliation"])
 
 
 @app.get("/")

@@ -24,3 +24,4 @@ class Account(Base):
 
     # Relationships
     transactions = relationship("Transaction", back_populates="account", cascade="all, delete-orphan")
+    reconciliations = relationship("BankReconciliation", back_populates="account", cascade="all, delete-orphan")
