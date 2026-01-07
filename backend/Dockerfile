@@ -18,14 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create receipts directory
-RUN mkdir -p /app/receipts /app/secrets
-
-# Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-
-USER appuser
+# Create receipts directory with proper permissions
+RUN mkdir -p /app/receipts /app/secrets && \
+    chmod 777 /app/receipts /app/secrets
 
 # Expose port
 EXPOSE 8000
