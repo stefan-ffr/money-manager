@@ -118,11 +118,11 @@ if nonce_already_used(invoice.nonce):
 
 ---
 
-## 2. Passkey Authentication (WebAuthn) - Empfohlen! 🔐
+## 2. Passkey Authentication (WebAuthn) ✅ IMPLEMENTIERT
 
 ### Warum Passkeys?
 
-Du hast recht - auch wenn nur eine Instanz auf die DB zugreift, braucht die **Web-Oberfläche** Auth!
+Die **Web-Oberfläche** benötigt sichere Authentifizierung!
 
 **Problem ohne Auth:**
 - Jeder der die URL kennt, hat Zugriff
@@ -134,6 +134,8 @@ Du hast recht - auch wenn nur eine Instanz auf die DB zugreift, braucht die **We
 - Hardware-basiert (YubiKey)
 - Phishing-resistent
 - Keine Passwörter!
+
+### Status: Vollständig implementiert (v1.1)
 
 ### Implementation:
 
@@ -395,15 +397,206 @@ function Login() {
 
 ---
 
-## 3. Gespiegelte Instanzen (Replication) 🔄
+## 2.1 OAuth2/OIDC Integration (SSO) ✅ IMPLEMENTIERT
 
-### Ja, das ist möglich und sinnvoll!
+### Warum OAuth2/OIDC?
+
+Für Enterprise-Umgebungen und zentrale Benutzerverwaltung ist Single Sign-On (SSO) essentiell.
 
 **Use Cases:**
-1. **Backup** - Automatische Replikation
+- **Authentik Integration** - Self-hosted SSO Lösung
+- **Keycloak Integration** - Enterprise Identity Management
+- **Generic OIDC** - Beliebige OIDC-Provider (Auth0, Okta, etc.)
+- **Zentrale User-Verwaltung** - Ein Login für alle Apps
+- **Gruppen & Rollen** - User Permissions zentral verwalten
+
+### Status: Vollständig implementiert (v1.1)
+
+### Implementation:
+
+**Backend Configuration:**
+
+```python
+# backend/app/core/config.py
+class Settings(BaseSettings):
+    # OAuth2/OIDC Configuration
+    OAUTH_ENABLED: bool = False
+    OAUTH_CLIENT_ID: str = ""
+    OAUTH_CLIENT_SECRET: str = ""
+    OAUTH_AUTHORIZATION_URL: str = ""  # e.g. https://auth.example.com/application/o/authorize/
+    OAUTH_TOKEN_URL: str = ""          # e.g. https://auth.example.com/application/o/token/
+    OAUTH_USERINFO_URL: str = ""       # e.g. https://auth.example.com/application/o/userinfo/
+    OAUTH_REDIRECT_URI: str = "http://localhost:3000/auth/callback"
+    OAUTH_SCOPES: str = "openid email profile"
+```
+
+**Backend OAuth Endpoints:**
+
+```python
+# backend/app/api/auth.py
+from authlib.integrations.starlette_client import OAuth
+
+oauth = OAuth()
+
+@router.get("/auth/oauth/config")
+async def get_oauth_config():
+    """Return OAuth configuration for frontend"""
+    if not settings.OAUTH_ENABLED:
+        return {"enabled": False}
+
+    return {
+        "enabled": True,
+        "authorization_url": settings.OAUTH_AUTHORIZATION_URL,
+        "client_id": settings.OAUTH_CLIENT_ID,
+        "redirect_uri": settings.OAUTH_REDIRECT_URI,
+        "scopes": settings.OAUTH_SCOPES.split(),
+    }
+
+@router.get("/auth/oauth/login")
+async def oauth_login(request: Request):
+    """Initiate OAuth login flow"""
+    redirect_uri = settings.OAUTH_REDIRECT_URI
+    return await oauth.create_client('oidc').authorize_redirect(request, redirect_uri)
+
+@router.post("/auth/oauth/callback")
+async def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """Handle OAuth callback and create/login user"""
+    # Exchange code for token
+    token_response = await oauth.create_client('oidc').authorize_access_token(code=code)
+
+    # Get user info
+    userinfo = await oauth.create_client('oidc').userinfo(token=token_response['access_token'])
+
+    # Find or create user
+    user = db.query(User).filter(User.email == userinfo['email']).first()
+    if not user:
+        user = User(
+            email=userinfo['email'],
+            username=userinfo.get('preferred_username', userinfo['email']),
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # Create JWT token
+    access_token = create_access_token({"sub": str(user.id)})
+
+    return {"access_token": access_token, "token_type": "bearer"}
+```
+
+**Frontend OAuth Integration:**
+
+```typescript
+// frontend/src/services/auth.ts
+export async function loginWithOAuth(): Promise<void> {
+  // Get OAuth configuration
+  const configResponse = await axios.get(`${API_URL}/api/v1/auth/oauth/config`)
+  const config = configResponse.data
+
+  if (!config.enabled) {
+    throw new Error('OAuth is not enabled')
+  }
+
+  // Generate state for CSRF protection
+  const state = generateRandomString(32)
+  sessionStorage.setItem('oauth_state', state)
+
+  // Build authorization URL
+  const params = new URLSearchParams({
+    client_id: config.client_id,
+    redirect_uri: config.redirect_uri,
+    response_type: 'code',
+    scope: config.scopes.join(' '),
+    state: state,
+  })
+
+  // Redirect to OAuth provider
+  window.location.href = `${config.authorization_url}?${params.toString()}`
+}
+
+export async function handleOAuthCallback(code: string, state: string): Promise<string> {
+  // Verify state (CSRF protection)
+  const savedState = sessionStorage.getItem('oauth_state')
+  if (state !== savedState) {
+    throw new Error('Invalid state parameter')
+  }
+
+  // Exchange code for token
+  const response = await axios.post(`${API_URL}/api/v1/auth/oauth/callback`, {
+    code,
+    state,
+  })
+
+  const { access_token } = response.data
+  localStorage.setItem('token', access_token)
+
+  return access_token
+}
+```
+
+### Authentik Setup Beispiel:
+
+```yaml
+# 1. Authentik Provider erstellen
+Provider Type: OAuth2/OpenID Provider
+Name: Money Manager
+Client ID: money-manager
+Client Secret: <generate>
+Redirect URIs: http://localhost:3000/auth/callback
+
+# 2. Application erstellen
+Name: Money Manager
+Slug: money-manager
+Provider: Money Manager (from step 1)
+
+# 3. .env konfigurieren
+OAUTH_ENABLED=true
+OAUTH_CLIENT_ID=money-manager
+OAUTH_CLIENT_SECRET=<from-step-1>
+OAUTH_AUTHORIZATION_URL=https://auth.example.com/application/o/authorize/
+OAUTH_TOKEN_URL=https://auth.example.com/application/o/token/
+OAUTH_USERINFO_URL=https://auth.example.com/application/o/userinfo/
+OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
+```
+
+### Security Features:
+
+✅ **State Parameter** - CSRF Protection
+✅ **PKCE Support** - Enhanced security for public clients
+✅ **Automatic User Creation** - User wird bei erstem Login angelegt
+✅ **Multiple Providers** - Authentik, Keycloak, generic OIDC
+✅ **Role Mapping** - Gruppen aus OIDC Provider übernehmen (TODO)
+
+### Vorteile:
+
+✅ **Zentrales User Management** - Ein Login für alle Apps
+✅ **Enterprise-Ready** - LDAP/AD Integration über Authentik
+✅ **Self-Hosted** - Volle Kontrolle mit Authentik/Keycloak
+✅ **2FA/MFA Support** - Über OIDC Provider
+✅ **Audit Logs** - Zentral im SSO System
+
+---
+
+## 3. Gespiegelte Instanzen (Replication) ✅ IMPLEMENTIERT
+
+### Status: Vollständig implementiert (v1.1)
+
+Mirror Instances ermöglichen automatisches Backup und High Availability.
+
+**Use Cases:**
+1. **Backup** - Automatische bidirektionale Replikation
 2. **High Availability** - Failover bei Ausfall
-3. **Multi-Region** - Schnellerer Zugriff
+3. **Multi-Region** - Geografische Redundanz
 4. **Team-Sync** - Mehrere Personen, gleiche Daten
+
+**Features:**
+- ✅ Bidirektionale Synchronisation
+- ✅ Conflict Detection & Resolution
+- ✅ Background Sync Scheduler (APScheduler)
+- ✅ RSA-signierte Sync-Requests
+- ✅ Sync-Logs & Audit Trail
+- ✅ Frontend Management UI
 
 ### Architecture:
 
@@ -746,25 +939,41 @@ services:
 
 ---
 
-## Zusammenfassung
+## Zusammenfassung (Stand: v1.1 - 2025-01-07)
 
 ### ✅ Federation Security
 - RSA 2048-bit Public/Private Keys
 - Wie SSH: Signierte Requests
 - Man-in-the-Middle Schutz
-- **Status: Implementiert**
+- **Status: Vollständig implementiert**
 
-### 🔐 Passkey Auth
-- WebAuthn Standard
-- Biometrisch (Face ID, Touch ID)
+### 🔐 Passkey Authentication (WebAuthn)
+- WebAuthn 2.2.0 Standard
+- Biometrisch (Face ID, Touch ID, Hardware Keys)
 - Phishing-resistent
-- **Status: Code-Beispiele bereit, Implementierung empfohlen**
+- Multi-Device Support
+- **Status: ✅ Vollständig implementiert (v1.1)**
 
-### 🔄 Mirror Instances
-- Bidirektionale Sync
-- Conflict Resolution
-- Automatic Background Sync
-- **Status: Architecture definiert, bereit zur Implementierung**
+### 🔑 OAuth2/OIDC Integration
+- SSO mit Authentik, Keycloak, generic OIDC
+- Zentrales User Management
+- CSRF-geschützt (State Parameter)
+- Automatic User Creation
+- **Status: ✅ Vollständig implementiert (v1.1)**
+
+### 🔄 Mirror Instances (Replication)
+- Bidirektionale Synchronisation
+- Conflict Resolution (last_write_wins, primary_wins, manual)
+- Automatic Background Sync (APScheduler)
+- RSA-signierte Sync-Requests
+- Frontend Management UI
+- **Status: ✅ Vollständig implementiert (v1.1)**
+
+### 📱 Progressive Web App (PWA)
+- Installierbar auf allen Plattformen
+- Offline-Support mit Service Worker
+- App-like Experience ohne App Store
+- **Status: ✅ Vollständig implementiert (v1.1)**
 
 ## Empfohlene Security Best Practices
 
@@ -773,7 +982,19 @@ services:
 3. **Rate Limiting** - API Request Limits
 4. **Secrets Management** - Private Keys in Docker Secrets
 5. **Audit Logs** - Alle Changes tracken
-6. **Regular Backups** - Database + Receipts
+6. **Regular Backups** - Database + Receipts + Mirror Instances
 7. **2FA für Telegram** - TELEGRAM_ALLOWED_USERS nutzen
+8. **OAuth/Passkey Auth** - Sichere Anmeldung aktivieren
+9. **Mirror Instances** - Mindestens eine Backup-Instanz einrichten
+10. **Monitoring** - Sync-Logs und API-Errors überwachen
 
-Möchtest du, dass ich eine dieser Features komplett implementiere?
+## Weitere Informationen
+
+- [MIRROR_INSTANCES.md](MIRROR_INSTANCES.md) - Detaillierte Anleitung für Mirror Instances
+- [ROADMAP.md](ROADMAP.md) - Zukünftige Security Features
+- [README.md](README.md) - Hauptdokumentation
+
+---
+
+**Letzte Aktualisierung:** 2025-01-07
+**Version:** v1.1

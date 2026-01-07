@@ -154,27 +154,35 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 - Smart Install Prompt (nach Delay, dismissable)
 - Funktioniert ohne App Store
 
-### Mirror Instances (Replication)
-- [ ] MirrorInstance Model & API
-  - [ ] Instance Configuration
-  - [ ] Sync Direction Settings
-  - [ ] Priority Management
-- [ ] Replication Service
-  - [ ] Bidirectional Sync Algorithm
-  - [ ] Conflict Detection & Resolution
-  - [ ] Delta Sync (nur Changes)
-- [ ] Background Sync Scheduler
-  - [ ] Automatic Sync Jobs
-  - [ ] Manual Trigger Endpoint
-  - [ ] Sync Status Monitoring
-- [ ] Conflict Resolution UI
-  - [ ] Manual Conflict Review
-  - [ ] Strategy Selection
-  - [ ] History View
+### Mirror Instances (Replication) ✅ IMPLEMENTIERT
+- [x] MirrorInstance Model & API
+  - [x] Instance Configuration
+  - [x] Sync Direction Settings (push, pull, bidirectional)
+  - [x] Priority Management
+- [x] Replication Service
+  - [x] Bidirectional Sync Algorithm
+  - [x] Conflict Detection & Resolution
+  - [x] Delta Sync (nur Changes seit last_sync)
+- [x] Background Sync Scheduler
+  - [x] Automatic Sync Jobs (APScheduler)
+  - [x] Manual Trigger Endpoint
+  - [x] Sync Status Monitoring
+- [x] Conflict Resolution UI
+  - [x] Manual Conflict Review (Sync Logs)
+  - [x] Strategy Selection (last_write_wins, primary_wins, manual)
+  - [x] History View & Management
 
-**Priority:** HIGH  
-**Reason:** Backup & High Availability  
-**Implementierung:** Design in SECURITY.md komplett
+**Priority:** HIGH
+**Reason:** Backup & High Availability
+**Status:** ✅ Vollständig implementiert (2025-01-07)
+**Details:**
+- Backend: MirrorInstance, SyncLog, ConflictResolution Models
+- Replication Service mit bidirektionaler Sync-Logik
+- APScheduler für Background Jobs (konfigurierbar per REPLICATION_SYNC_INTERVAL_MINUTES)
+- Frontend: Komplette Mirror Management UI in Settings
+- Konfliktauflösungsstrategien: last_write_wins, primary_wins, manual
+- RSA-Signatur-Verifizierung für alle Sync-Operationen
+- Automatische und manuelle Sync-Trigger
 
 ### Advanced Security
 - [ ] Replay Protection
@@ -559,5 +567,5 @@ git push origin feature/passkey-auth
 
 ---
 
-**Letzte Aktualisierung:** 2024-12-07  
+**Letzte Aktualisierung:** 2025-01-07
 **Nächstes Review:** 2025-03-01

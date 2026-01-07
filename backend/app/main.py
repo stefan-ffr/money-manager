@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth
-from app.core.database import engine
+from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication
+from app.core.database import engine, SessionLocal
 from app.models import base
 
 # Create database tables
@@ -34,6 +34,7 @@ app.include_router(shared_accounts.router, prefix="/api/v1/shared-accounts", tag
 app.include_router(federation.router, prefix="/api/v1/federation", tags=["federation"])
 app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(bank_import.router, prefix="/api/v1/import", tags=["bank-import"])
+app.include_router(replication.router, prefix="/api/v1/replication", tags=["replication"])
 
 
 @app.get("/")
@@ -56,7 +57,7 @@ async def health_check():
 @app.get("/.well-known/money-instance")
 async def instance_info():
     from app.federation.crypto import get_public_key_pem
-    
+
     return {
         "instance_id": settings.INSTANCE_DOMAIN,
         "version": "1.0.0",
@@ -64,3 +65,47 @@ async def instance_info():
         "api_endpoint": f"https://{settings.INSTANCE_DOMAIN}/api/v1",
         "federation_enabled": settings.FEDERATION_ENABLED,
     }
+
+
+# Background Scheduler for Replication
+if settings.REPLICATION_ENABLED:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from app.services.replication_service import ReplicationService
+    import asyncio
+
+    scheduler = AsyncIOScheduler()
+
+    async def sync_mirrors_job():
+        """Background job to sync with all mirror instances"""
+        db = SessionLocal()
+        try:
+            service = ReplicationService(db)
+            result = await service.sync_all_mirrors()
+            print(f"[Replication Sync] Synced: {result.get('synced_count', 0)}, Failed: {result.get('failed_count', 0)}")
+        except Exception as e:
+            print(f"[Replication Sync Error] {str(e)}")
+        finally:
+            db.close()
+
+    def run_sync_job():
+        """Wrapper to run async job in sync context"""
+        asyncio.create_task(sync_mirrors_job())
+
+    @app.on_event("startup")
+    async def start_scheduler():
+        """Start background scheduler on app startup"""
+        scheduler.add_job(
+            run_sync_job,
+            'interval',
+            minutes=settings.REPLICATION_SYNC_INTERVAL_MINUTES,
+            id='mirror_sync',
+            replace_existing=True
+        )
+        scheduler.start()
+        print(f"[Replication] Background sync scheduler started (interval: {settings.REPLICATION_SYNC_INTERVAL_MINUTES} minutes)")
+
+    @app.on_event("shutdown")
+    async def shutdown_scheduler():
+        """Shutdown scheduler on app shutdown"""
+        scheduler.shutdown()
+        print("[Replication] Background sync scheduler stopped")
