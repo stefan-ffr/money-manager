@@ -21,6 +21,16 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: none
+      checks: none
+      deployments: none
+      discussions: none
+      id-token: none
+      issues: none
+      pull-requests: none
+      repository-projects: none
+      security-events: none
+      statuses: none
 
     steps:
       - name: Checkout repository
@@ -60,6 +70,16 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: none
+      checks: none
+      deployments: none
+      discussions: none
+      id-token: none
+      issues: none
+      pull-requests: none
+      repository-projects: none
+      security-events: none
+      statuses: none
 
     steps:
       - name: Checkout repository
@@ -94,7 +114,7 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:8000' }}
+            VITE_API_URL=${{ vars.VITE_API_URL || 'http://localhost:8000' }}
 
   test-backend:
     runs-on: ubuntu-latest
