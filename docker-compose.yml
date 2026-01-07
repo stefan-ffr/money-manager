@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: money-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-money}
+      POSTGRES_USER: ${POSTGRES_USER:-money}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-money}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - money-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: money-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-money}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-money}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
+      INSTANCE_DOMAIN: ${INSTANCE_DOMAIN:-localhost}
+      FEDERATION_ENABLED: ${FEDERATION_ENABLED:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - ./receipts:/app/receipts
+      - ./secrets:/app/secrets
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    networks:
+      - money-network
+
+  telegram-bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: money-telegram-bot
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-money}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-money}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
+      BACKEND_URL: http://backend:8000
+    volumes:
+      - ./receipts:/app/receipts
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    command: python telegram_bot.py
+    networks:
+      - money-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: money-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - money-network
+
+  # Optional: Traefik Reverse Proxy für Production
+  # traefik:
+  #   image: traefik:v2.10
+  #   container_name: money-traefik
+  #   command:
+  #     - "--api.insecure=true"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+  #     - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+  #     - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #     - "8080:8080"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ./letsencrypt:/letsencrypt
+  #   networks:
+  #     - money-network
+
+volumes:
+  postgres_data:
+
+networks:
+  money-network:
+    driver: bridge
