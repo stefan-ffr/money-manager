@@ -1,9 +1,5 @@
 import axios from 'axios'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
-import type {
-  PublicKeyCredentialCreationOptionsJSON,
-  PublicKeyCredentialRequestOptionsJSON,
-} from '@simplewebauthn/browser'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -37,7 +33,7 @@ export async function registerWithPasskey(
     })
 
     const { user_id, options } = beginResponse.data
-    const parsedOptions: PublicKeyCredentialCreationOptionsJSON = JSON.parse(options)
+    const parsedOptions = JSON.parse(options)
 
     // 2. Trigger browser Passkey registration
     const credential = await startRegistration(parsedOptions)
@@ -77,7 +73,7 @@ export async function loginWithPasskey(username: string): Promise<AuthTokens> {
     })
 
     const { options } = beginResponse.data
-    const parsedOptions: PublicKeyCredentialRequestOptionsJSON = JSON.parse(options)
+    const parsedOptions = JSON.parse(options)
 
     // 2. Authenticate with Passkey (browser prompts for biometric/PIN)
     const credential = await startAuthentication(parsedOptions)
