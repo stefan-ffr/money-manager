@@ -190,56 +190,292 @@ function FederationSettings() {
 // Mirror Settings Component
 function MirrorSettings() {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [formData, setFormData] = useState({
+    instance_url: '',
+    instance_id: '',
+    public_key: '',
+    sync_direction: 'bidirectional',
+    priority: 2,
+    sync_enabled: true,
+  })
+
+  const { data: mirrors, isLoading, refetch } = useQuery({
+    queryKey: ['mirrors'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/replication/mirrors`)
+      return res.data
+    },
+  })
+
+  const handleAddMirror = async () => {
+    try {
+      await axios.post(`${API_URL}/api/v1/replication/mirrors`, formData)
+      setShowAddForm(false)
+      setFormData({
+        instance_url: '',
+        instance_id: '',
+        public_key: '',
+        sync_direction: 'bidirectional',
+        priority: 2,
+        sync_enabled: true,
+      })
+      refetch()
+    } catch (error: any) {
+      alert(`Fehler beim Hinzufügen: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleDeleteMirror = async (id: number) => {
+    if (!confirm('Möchten Sie diese Mirror Instanz wirklich löschen?')) return
+    try {
+      await axios.delete(`${API_URL}/api/v1/replication/mirrors/${id}`)
+      refetch()
+    } catch (error: any) {
+      alert(`Fehler beim Löschen: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleToggleSync = async (id: number, enabled: boolean) => {
+    try {
+      await axios.patch(`${API_URL}/api/v1/replication/mirrors/${id}`, {
+        sync_enabled: !enabled,
+      })
+      refetch()
+    } catch (error: any) {
+      alert(`Fehler beim Aktualisieren: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleManualSync = async (id: number) => {
+    try {
+      await axios.post(`${API_URL}/api/v1/replication/mirrors/${id}/sync`)
+      alert('Sync erfolgreich gestartet!')
+      refetch()
+    } catch (error: any) {
+      alert(`Fehler beim Sync: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleSyncAll = async () => {
+    try {
+      await axios.post(`${API_URL}/api/v1/replication/sync-all`)
+      alert('Sync mit allen Mirror Instanzen gestartet!')
+      refetch()
+    } catch (error: any) {
+      alert(`Fehler beim Sync: ${error.response?.data?.detail || error.message}`)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Mirror Instanzen</h2>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
-        >
-          + Mirror hinzufügen
-        </button>
+        <div className="flex gap-2">
+          {mirrors && mirrors.length > 0 && (
+            <button
+              onClick={handleSyncAll}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              🔄 Alle synchronisieren
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+          >
+            + Mirror hinzufügen
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-medium text-blue-900 mb-2">📋 Mirror Instanzen Info</h3>
+        <p className="text-sm text-blue-700 mb-2">
+          Mirror Instanzen ermöglichen automatisches Backup und Synchronisation deiner Daten
+        </p>
+        <ul className="text-xs text-blue-600 list-disc list-inside space-y-1">
+          <li><strong>Bidirektional:</strong> Daten werden in beide Richtungen synchronisiert</li>
+          <li><strong>Push Only:</strong> Nur lokale Änderungen werden zum Mirror gesendet</li>
+          <li><strong>Pull Only:</strong> Nur Änderungen vom Mirror werden abgerufen</li>
+          <li><strong>Priorität 1:</strong> Primary Instance (gewinnt bei Konflikten)</li>
+          <li><strong>Priorität 2+:</strong> Secondary Instance</li>
+        </ul>
       </div>
 
       {showAddForm && (
-        <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-          <h3 className="font-medium">Neue Mirror Instanz</h3>
+        <div className="bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200">
+          <h3 className="font-medium">Neue Mirror Instanz hinzufügen</h3>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700">URL</label>
+            <label className="block text-sm font-medium text-gray-700">Instance URL *</label>
             <input
               type="text"
+              value={formData.instance_url}
+              onChange={(e) => setFormData({ ...formData, instance_url: e.target.value })}
               placeholder="https://mirror.example.com"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Instance ID (Domain) *</label>
+            <input
+              type="text"
+              value={formData.instance_id}
+              onChange={(e) => setFormData({ ...formData, instance_id: e.target.value })}
+              placeholder="mirror.example.com"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Eindeutige ID der Mirror Instanz</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Public Key (RSA) *</label>
+            <textarea
+              value={formData.public_key}
+              onChange={(e) => setFormData({ ...formData, public_key: e.target.value })}
+              placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"
+              rows={4}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Public Key von <code className="bg-gray-200 px-1">https://mirror.example.com/.well-known/money-instance</code>
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Priorität</label>
-              <input type="number" defaultValue={2} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+              <input
+                type="number"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+                min={1}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              />
               <p className="text-xs text-gray-500 mt-1">1 = Primary, 2+ = Secondary</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Sync Richtung</label>
-              <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+              <select
+                value={formData.sync_direction}
+                onChange={(e) => setFormData({ ...formData, sync_direction: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              >
                 <option value="bidirectional">↔️ Bidirektional</option>
                 <option value="push">→ Push Only</option>
                 <option value="pull">← Pull Only</option>
               </select>
             </div>
           </div>
-          <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-            Hinzufügen
-          </button>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.sync_enabled}
+              onChange={(e) => setFormData({ ...formData, sync_enabled: e.target.checked })}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-900">Sync aktivieren</label>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddMirror}
+              className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+            >
+              Hinzufügen
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+            >
+              Abbrechen
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="text-center py-12 text-gray-500">
-        <Server className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p>Keine Mirror Instanzen konfiguriert</p>
-        <p className="text-sm mt-2">Füge eine Mirror Instanz für automatisches Backup hinzu</p>
-      </div>
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="text-gray-500 mt-4">Lade Mirror Instanzen...</p>
+        </div>
+      ) : mirrors && mirrors.length > 0 ? (
+        <div className="space-y-4">
+          {mirrors.map((mirror: any) => (
+            <div key={mirror.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-lg">{mirror.instance_id}</h3>
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        mirror.sync_enabled
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {mirror.sync_enabled ? '✅ Aktiv' : '⏸️ Pausiert'}
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">
+                      {mirror.priority === 1 ? '⭐ Primary' : `Secondary (${mirror.priority})`}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{mirror.instance_url}</p>
+                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span>
+                      Richtung:{' '}
+                      {mirror.sync_direction === 'bidirectional' && '↔️ Bidirektional'}
+                      {mirror.sync_direction === 'push' && '→ Push Only'}
+                      {mirror.sync_direction === 'pull' && '← Pull Only'}
+                    </span>
+                    <span>
+                      Letzter Sync:{' '}
+                      {mirror.last_sync
+                        ? new Date(mirror.last_sync).toLocaleString('de-DE')
+                        : 'Noch nie'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleManualSync(mirror.id)}
+                    className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                    title="Manuell synchronisieren"
+                  >
+                    🔄 Sync
+                  </button>
+                  <button
+                    onClick={() => handleToggleSync(mirror.id, mirror.sync_enabled)}
+                    className={`text-sm px-3 py-1 rounded ${
+                      mirror.sync_enabled
+                        ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                    title={mirror.sync_enabled ? 'Pausieren' : 'Aktivieren'}
+                  >
+                    {mirror.sync_enabled ? '⏸️' : '▶️'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMirror(mirror.id)}
+                    className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                    title="Löschen"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-gray-500">
+          <Server className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p>Keine Mirror Instanzen konfiguriert</p>
+          <p className="text-sm mt-2">Füge eine Mirror Instanz für automatisches Backup hinzu</p>
+        </div>
+      )}
     </div>
   )
 }

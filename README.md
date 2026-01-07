@@ -36,12 +36,14 @@ Eine moderne, selbst-gehostete Privatbuchhaltungs-Lösung für die Schweiz mit d
 - 🔴 **Import Confirmation** - Alle Imports rot markiert für Review
 - 📊 **Import Statistics** - Übersicht über alle Imports
 
-### Security Features (🆕)
-- 🔐 **Passkey Support** - WebAuthn/FIDO2 für biometrische Anmeldung (Face ID, Touch ID)
+### Security & Authentication (🆕 v1.1)
+- 🔐 **Passkey Authentication** - WebAuthn/FIDO2 für biometrische Anmeldung (Face ID, Touch ID, Hardware Keys)
+- 🔑 **OAuth2/OIDC Integration** - SSO mit Authentik, Keycloak oder anderen OIDC Providern
 - 🔒 **RSA Public/Private Keys** - Sichere Federation wie SSH
-- 🔄 **Mirror Instances** - Gespiegelte Instanzen für Backup & High Availability
+- 🔄 **Mirror Instances** - Gespiegelte Instanzen für automatisches Backup & High Availability
 - 📝 **Audit Logs** - Alle Sync-Operationen werden geloggt
-- ⚠️ **Conflict Resolution** - Automatische oder manuelle Konfliktauflösung
+- ⚠️ **Conflict Resolution** - Automatische oder manuelle Konfliktauflösung (last_write_wins, primary_wins, manual)
+- 📱 **Progressive Web App (PWA)** - Installierbar auf Smartphone, Tablet und Desktop ohne App Store
 
 ## Schnellstart
 
@@ -95,6 +97,19 @@ npm run dev
 # Database
 DATABASE_URL=postgresql://money:password@db:5432/money
 
+# Security
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# OAuth2/OIDC (optional - für SSO)
+OAUTH_ENABLED=true
+OAUTH_CLIENT_ID=money-manager
+OAUTH_CLIENT_SECRET=your-client-secret
+OAUTH_AUTHORIZATION_URL=https://auth.example.com/application/o/authorize/
+OAUTH_TOKEN_URL=https://auth.example.com/application/o/token/
+OAUTH_USERINFO_URL=https://auth.example.com/application/o/userinfo/
+OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
+
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 TELEGRAM_ALLOWED_USERS=123456789,987654321
@@ -102,10 +117,12 @@ TELEGRAM_ALLOWED_USERS=123456789,987654321
 # Federation
 INSTANCE_DOMAIN=money.example.com
 FEDERATION_ENABLED=true
-
-# Security
-SECRET_KEY=your-secret-key-here
 INSTANCE_PRIVATE_KEY_PATH=/app/secrets/instance_key.pem
+
+# Mirror Instances / Replication
+REPLICATION_ENABLED=true
+REPLICATION_SYNC_INTERVAL_MINUTES=5
+REPLICATION_CONFLICT_STRATEGY=last_write_wins  # last_write_wins, primary_wins, manual
 ```
 
 ### Telegram Bot Setup
@@ -341,9 +358,11 @@ docker pull ghcr.io/yourusername/money-manager-frontend:latest
 - ✅ Red Confirmation für Auto-Entries
 - ✅ **Umfassende Settings Page**
 
-### v1.1 (Q1 2025)
-- ⏳ **Passkey Authentication** (WebAuthn) - Code fertig!
-- ⏳ **Mirror Instances** - Design fertig!
+### v1.1 (Q1 2025) ✅ FERTIG!
+- ✅ **Passkey Authentication** (WebAuthn) - Biometrische Anmeldung mit Face ID, Touch ID, Hardware Keys
+- ✅ **OAuth2/OIDC Integration** - SSO mit Authentik, Keycloak oder anderen OIDC Providern
+- ✅ **Progressive Web App (PWA)** - Installierbar auf allen Plattformen ohne App Store
+- ✅ **Mirror Instances** - Bidirektionale Synchronisation für Backup & High Availability
 - ⏳ Replay Protection (Timestamp + Nonce)
 - ⏳ Rate Limiting & Audit Logs
 - ⏳ Recurring Transactions

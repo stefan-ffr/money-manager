@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, CreditCard, ArrowLeftRight, Users, Settings, LogOut, User } from 'lucide-react'
+import { Home, CreditCard, ArrowLeftRight, Users, Settings, LogOut, User, GitCompare } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 interface LayoutProps {
@@ -17,6 +17,7 @@ function Layout({ children }: LayoutProps) {
     { path: '/accounts', icon: CreditCard, label: 'Konten' },
     { path: '/transactions', icon: ArrowLeftRight, label: 'Transaktionen' },
     { path: '/shared-accounts', icon: Users, label: 'Gemeinschaft' },
+    { path: '/reconciliation', icon: GitCompare, label: 'Abstimmung' },
     { path: '/settings', icon: Settings, label: 'Einstellungen' },
   ]
 

@@ -29,10 +29,15 @@ class Settings(BaseSettings):
     INSTANCE_DOMAIN: str = "localhost"
     FEDERATION_ENABLED: bool = False
     INSTANCE_PRIVATE_KEY_PATH: str = "/app/secrets/instance_key.pem"
-    
+
+    # Mirror Instances / Replication
+    REPLICATION_ENABLED: bool = False
+    REPLICATION_SYNC_INTERVAL_MINUTES: int = 5  # Sync every 5 minutes
+    REPLICATION_CONFLICT_STRATEGY: str = "last_write_wins"  # last_write_wins, primary_wins, manual
+
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
-    
+
     # File Storage
     RECEIPTS_PATH: str = "/app/receipts"
     
