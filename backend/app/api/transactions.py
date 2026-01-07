@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from decimal import Decimal
 from datetime import date
@@ -18,17 +18,17 @@ class TransactionCreate(BaseModel):
     account_id: int
     date: date
     amount: Decimal
-    category: str | None = None
-    description: str | None = None
+    category: Optional[str] = None
+    description: Optional[str] = None
     status: str = "pending"
 
 
 class TransactionUpdate(BaseModel):
-    date: date | None = None
-    amount: Decimal | None = None
-    category: str | None = None
-    description: str | None = None
-    status: str | None = None
+    date: Optional[date] = None
+    amount: Optional[Decimal] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
 
 
 class TransactionResponse(BaseModel):
@@ -36,12 +36,12 @@ class TransactionResponse(BaseModel):
     account_id: int
     date: date
     amount: Decimal
-    category: str | None
-    description: str | None
+    category: Optional[str]
+    description: Optional[str]
     status: str
     source: str
     requires_confirmation: bool
-    receipt_path: str | None
+    receipt_path: Optional[str]
 
     class Config:
         from_attributes = True
@@ -49,8 +49,8 @@ class TransactionResponse(BaseModel):
 
 @router.get("/", response_model=List[TransactionResponse])
 def list_transactions(
-    account_id: int | None = None,
-    status: str | None = None,
+    account_id: Optional[int] = None,
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)

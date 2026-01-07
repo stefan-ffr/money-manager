@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Home, CreditCard, ArrowLeftRight, Users, Settings } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Home, CreditCard, ArrowLeftRight, Users, Settings, LogOut, User } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 interface LayoutProps {
   children: ReactNode
@@ -8,6 +9,8 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
 
   const navItems = [
     { path: '/', icon: Home, label: 'Dashboard' },
@@ -16,6 +19,11 @@ function Layout({ children }: LayoutProps) {
     { path: '/shared-accounts', icon: Users, label: 'Gemeinschaft' },
     { path: '/settings', icon: Settings, label: 'Einstellungen' },
   ]
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,6 +54,24 @@ function Layout({ children }: LayoutProps) {
                   )
                 })}
               </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              {user && (
+                <>
+                  <div className="flex items-center text-sm text-gray-700">
+                    <User className="w-4 h-4 mr-1" />
+                    <span>{user.username}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-md"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Abmelden
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
