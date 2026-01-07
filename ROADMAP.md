@@ -379,255 +379,46 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 
 ---
 
-## 🏛️ v1.4 - Schweizer Vereins-Features (Q3 2025)
+## 💡 v1.4 - Performance & UX (Q3 2025)
 
-### Mitgliederverwaltung
-- [ ] Mitglieder-Modul
-  - [ ] Mitglieder CRUD (Name, Adresse, Email, Telefon)
-  - [ ] Mitgliedsnummern (automatisch generiert)
-  - [ ] Mitgliedsstatus (Aktiv, Passiv, Ehrenmitglied, Ausgetreten)
-  - [ ] Beitrittsdatum & Austrittsdatum
-  - [ ] Kategorien (Aktivmitglied, Passivmitglied, Junioren, Senioren)
-  - [ ] Notizen & Custom Fields
-- [ ] Mitgliederbeiträge
-  - [ ] Beitragstypen (Jahresbeitrag, Eintrittsbeitrag, Zusatzbeiträge)
-  - [ ] Beitragsperioden (Jährlich, Halbjährlich, Quartalsweise)
-  - [ ] Beitragskategorien nach Alter/Typ
-  - [ ] Rabatte & Ermässigungen
-  - [ ] Automatische Beitragsberechnung
-- [ ] Zahlungsverwaltung
-  - [ ] Offene Posten pro Mitglied
-  - [ ] Mahnwesen (1. Mahnung, 2. Mahnung, Letzte Mahnung)
-  - [ ] Zahlungserinnerungen per Email
-  - [ ] QR-Rechnung Generierung (Swiss QR-Code)
-  - [ ] Automatische Zuordnung von Zahlungseingängen
-
-**Priority:** HIGH
-**Reason:** Vereine = große Zielgruppe in CH
-
-### Vereinskassen-Buchhaltung
-- [ ] Vereinsspezifische Kontenstruktur
-  - [ ] Vereinskasse (Hauptkonto)
-  - [ ] Sparkonto / Anlagekonto
-  - [ ] Projektkassen (Events, Anlässe)
-  - [ ] Fonds & Rückstellungen
-- [ ] Kostenstellen
-  - [ ] Kostenstellen definieren (z.B. "Jugendförderung", "Vereinsanlass", "Unterhalt")
-  - [ ] Transaktionen Kostenstellen zuweisen
-  - [ ] Kostenstellen-Reporting
-  - [ ] Budget pro Kostenstelle
-- [ ] Projekt-Buchhaltung
-  - [ ] Projekte/Events erstellen (z.B. "Sommerfest 2025", "Jubiläum 50 Jahre")
-  - [ ] Einnahmen & Ausgaben pro Projekt tracken
-  - [ ] Projekt-Budget vs. Ist-Kosten
-  - [ ] Erfolgsrechnung pro Projekt
-- [ ] Vorstandsverwaltung
-  - [ ] Vorstandsmitglieder mit Funktionen (Präsident, Kassier, Aktuar, etc.)
-  - [ ] Amtsperioden
-  - [ ] Unterschriftsberechtigungen
-  - [ ] Sitzungsprotokolle (optional)
+### Performance Optimization
+- [ ] Database Optimization
+  - [ ] Query Performance Tuning
+  - [ ] Index Optimization
+  - [ ] Connection Pooling
+  - [ ] Caching Layer (Redis)
+- [ ] Frontend Performance
+  - [ ] Code Splitting
+  - [ ] Lazy Loading
+  - [ ] Image Optimization
+  - [ ] Bundle Size Reduction
+- [ ] API Optimization
+  - [ ] Response Compression
+  - [ ] Pagination Improvements
+  - [ ] Batch Endpoints
+  - [ ] GraphQL Alternative (optional)
 
 **Priority:** MEDIUM
-**Reason:** Essentiell für professionelle Vereinsführung
+**Reason:** Skalierbarkeit für mehr Benutzer
 
-### Schweizer Vereins-Compliance
-- [ ] Jahresabschluss nach OR (Obligationenrecht)
-  - [ ] Bilanz (Aktiven / Passiven)
-  - [ ] Erfolgsrechnung (Einnahmen / Ausgaben)
-  - [ ] Anhang zur Jahresrechnung
-  - [ ] Revisionsbericht-Vorlage
-- [ ] Revisorenwesen
-  - [ ] Revisoren erfassen
-  - [ ] Kontrollstelle zuweisen
-  - [ ] Revisionsbericht generieren
-  - [ ] Revisions-Checkliste
-- [ ] Budgetierung
-  - [ ] Jahresbudget erstellen
-  - [ ] Budget vs. Ist-Vergleich
-  - [ ] Budget-Kategorien nach Vereinsbedürfnissen
-  - [ ] Budgetvorschlag für Generalversammlung
-- [ ] Generalversammlung (GV) Support
-  - [ ] GV-Unterlagen Export
-  - [ ] Jahresbericht-Generator
-  - [ ] Mitgliederliste für Stimmrecht
-  - [ ] Protokoll-Vorlagen
+### Enhanced UX
+- [ ] Dark Mode
+  - [ ] Dark Theme Implementation
+  - [ ] User Preference Storage
+  - [ ] System Preference Detection
+- [ ] Accessibility (a11y)
+  - [ ] ARIA Labels
+  - [ ] Keyboard Navigation
+  - [ ] Screen Reader Support
+  - [ ] WCAG 2.1 AA Compliance
+- [ ] Internationalization
+  - [ ] German (Existing)
+  - [ ] French (FR-CH)
+  - [ ] Italian (IT-CH)
+  - [ ] English (EN)
 
 **Priority:** MEDIUM
-**Reason:** Rechtliche Anforderungen in CH
-
-### Spendenverwaltung
-- [ ] Spender-Management
-  - [ ] Spender erfassen (Privatpersonen, Firmen)
-  - [ ] Spendenhistorie pro Spender
-  - [ ] Dauerspenden (monatlich, jährlich)
-  - [ ] Spendenkategorien (Allgemein, Zweckgebunden)
-- [ ] Spendenbescheinigungen
-  - [ ] Automatische Spendenbescheinigung-Generierung
-  - [ ] PDF Export mit Vereinsstempel
-  - [ ] Sammelbestätigung Jahresende
-  - [ ] ESTV-konforme Formulare (für Steuerabzug)
-- [ ] Spenden-Tracking
-  - [ ] Zweckgebundene Spenden verwalten
-  - [ ] Spendenverwendung dokumentieren
-  - [ ] Spenden-Reporting für Transparenz
-  - [ ] Dankesschreiben-Vorlagen
-
-**Priority:** LOW
-**Reason:** Nur für gemeinnützige Vereine relevant
-
-### Vereins-Reporting
-- [ ] Schweizer Vereins-Reports
-  - [ ] Kassabericht (detailliert)
-  - [ ] Jahresrechnung nach Schweizer Standard
-  - [ ] Budget-Ist-Vergleich
-  - [ ] Mitgliederstatistik (Zu-/Abgänge)
-  - [ ] Beitragseinnahmen-Übersicht
-  - [ ] Offene Posten Liste
-- [ ] Export-Funktionen
-  - [ ] PDF Export für GV-Unterlagen
-  - [ ] Excel Export für Revisoren
-  - [ ] CSV für Buchhaltungssoftware
-  - [ ] Banana Accounting Export (beliebte CH Software)
-- [ ] Dashboard für Vorstand
-  - [ ] Vereinsvermögen Übersicht
-  - [ ] Mitgliederzahl & Entwicklung
-  - [ ] Offene Beiträge
-  - [ ] Nächste Zahlungen
-  - [ ] Budget-Status
-
-**Priority:** MEDIUM
-**Reason:** Vereinsvorstand braucht Transparenz
-
-### QR-Rechnung Integration (Swiss QR-Code)
-- [ ] QR-Rechnung Generierung
-  - [ ] Swiss QR-Code gemäss Standard
-  - [ ] Strukturierte Referenznummer
-  - [ ] IBAN & Zahlungsempfänger aus Vereinsdaten
-  - [ ] Betrag & Währung (CHF/EUR)
-  - [ ] Verwendungszweck (Mitgliederbeitrag, Spende, etc.)
-- [ ] Massen-QR-Rechnung
-  - [ ] Alle offenen Beiträge als QR-Rechnungen
-  - [ ] PDF-Sammeldatei für Postversand
-  - [ ] Email-Versand mit QR-Rechnung Anhang
-- [ ] Zahlungsabgleich
-  - [ ] Camt.054 Import (Zahlungsavise)
-  - [ ] Automatische Zuordnung via QR-Referenz
-  - [ ] Offene Posten automatisch schliessen
-
-**Priority:** HIGH
-**Reason:** Standard in CH seit 2020, sehr wichtig für Vereine
-
-### Vereins-Templates
-- [ ] Vorlagen für Schweizer Vereine
-  - [ ] Kontenplan-Vorlagen (Sportverein, Kulturverein, etc.)
-  - [ ] Kategorie-Templates
-  - [ ] Brief-Vorlagen (Zahlungserinnerung, Dankesschreiben)
-  - [ ] Protokoll-Vorlagen (GV, Vorstandssitzung)
-- [ ] Branchen-spezifisch
-  - [ ] Sportverein (Trainerbeiträge, Turniere, Material)
-  - [ ] Kulturverein (Konzerte, Ausstellungen, Mitgliederbeiträge)
-  - [ ] Gemeinnütziger Verein (Spenden, Projekte)
-  - [ ] Interessenverein (z.B. Quartierverein, Hobbyverein)
-
-**Priority:** LOW
-**Reason:** Nice-to-have für schnellen Start
-
-### Multi-Tenant für Vereine
-- [ ] Mandantenfähigkeit
-  - [ ] Mehrere Vereine pro Instanz
-  - [ ] Getrennte Buchhaltung pro Verein
-  - [ ] Getrennte Mitgliederdaten
-  - [ ] Zentrale Administration
-- [ ] Rollen & Berechtigungen
-  - [ ] Vorstand (voller Zugriff)
-  - [ ] Kassier (Finanz-Zugriff)
-  - [ ] Aktuar (Protokolle, Mitglieder)
-  - [ ] Revisor (Read-Only Finanz)
-  - [ ] Mitglied (eigene Daten ansehen)
-- [ ] Datenschutz
-  - [ ] DSGVO/FADP Compliance
-  - [ ] Mitglieder-Einwilligungen
-  - [ ] Datenexport für Mitglieder
-  - [ ] Löschkonzept
-
-**Priority:** LOW
-**Reason:** Für Hosting-Provider oder Dachverbände
-
----
-
-## 💡 Vereins-Use Cases
-
-### Use Case 1: Sportverein mit 150 Mitgliedern
-**Anforderungen:**
-- Mitgliederverwaltung mit Kategorien (Aktiv, Passiv, Junioren)
-- Jahresbeitrag CHF 120.- (Erwachsene), CHF 60.- (Junioren)
-- QR-Rechnungen per Email versenden
-- Trainerbeiträge verwalten
-- Event-Buchhaltung (Sommerfest, Jubiläum)
-- Jahresrechnung für GV
-
-**Lösung:**
-- Mitglieder erfassen mit Kategorien
-- Beitragstypen definieren
-- Automatische QR-Rechnung-Generierung Ende Jahr
-- Projekt "Sommerfest 2025" mit eigenem Budget
-- Jahresabschluss-Export als PDF für GV
-
-### Use Case 2: Kulturverein mit Spenden
-**Anforderungen:**
-- 50 Mitglieder + 200 Spender
-- Mitgliederbeiträge CHF 50.-
-- Spendenverwaltung mit Bescheinigungen
-- Konzert-Organisation (Ticket-Einnahmen)
-- Gemeinnützig anerkannt (Steuerabzug)
-
-**Lösung:**
-- Mitglieder + Spender getrennt verwalten
-- Spendenbescheinigungen automatisch generieren
-- Projekt "Konzert Frühling 2025" mit Ticketeinnahmen
-- Zweckgebundene Spenden tracken
-- ESTV-konforme Formulare
-
-### Use Case 3: Quartierverein
-**Anforderungen:**
-- 30 Mitglieder
-- Kleines Budget (~CHF 5'000.- / Jahr)
-- Quartalsfest organisieren
-- Einfache Buchhaltung für Vorstand
-- Revisor braucht Export
-
-**Lösung:**
-- Simple Mitgliederverwaltung
-- Projekt "Quartalsfest" mit Budget
-- Dashboard für Vorstand (aktueller Stand)
-- Excel-Export für Revisor
-- Jahresrechnung in 5 Minuten
-
----
-
-## 🎯 Vorteile für Schweizer Vereine
-
-### Warum Money Manager für Vereine?
-1. **🇨🇭 Schweizer Standards** - OR-konforme Jahresrechnung, QR-Rechnungen, ESTV-Formulare
-2. **💰 Kostenlos & Self-Hosted** - Keine monatlichen Kosten wie bei Vereinssoftware (CHF 20-50/Monat)
-3. **🔐 Datenschutz** - Alle Daten bleiben beim Verein (DSGVO/FADP-konform)
-4. **📊 Einfach & Professionell** - Für kleine Vereine einfach genug, für grosse professionell genug
-5. **🔄 Federation** - Mehrere Vereine können zusammenarbeiten (z.B. Dachverband + Sektionen)
-6. **📱 PWA** - Vorstand kann auch vom Smartphone aus arbeiten
-7. **🆓 Open Source** - Transparenz, Community, Anpassbar
-
-### Vergleich zu kommerzieller Vereinssoftware
-
-| Feature | Money Manager | Webling | Verein360 | Klara |
-|---------|---------------|---------|-----------|-------|
-| Kosten/Jahr | CHF 0.- | CHF 240.- | CHF 600.- | CHF 360.- |
-| Self-Hosted | ✅ | ❌ | ❌ | ❌ |
-| Open Source | ✅ | ❌ | ❌ | ❌ |
-| QR-Rechnung | ✅ | ✅ | ✅ | ✅ |
-| Mitglieder | ✅ | ✅ | ✅ | ✅ |
-| Federation | ✅ | ❌ | ❌ | ❌ |
-| OR-Jahresrechnung | ✅ | ✅ | ✅ | ✅ |
-| Eigene Daten | ✅ | ❌ | ❌ | ❌ |
+**Reason:** Benutzerfreundlichkeit & Inklusivität
 
 ---
 
@@ -676,6 +467,481 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 
 **Priority:** LOW  
 **Reason:** Niche Use Case
+
+---
+
+## 🏛️ Money Manager Vereine - Separate Edition
+
+> **Separate Variante für Schweizer Vereine** - Eigenständiges Repository mit Datenaustausch zur Standard-Edition
+
+### 📋 Konzept: Zwei Editionen
+
+**Money Manager (Standard Edition)**
+- Persönliche Finanzverwaltung
+- Gemeinschaftskonten (Shared Accounts)
+- Bank Import & Reconciliation
+- Multi-Currency & Federation
+- PWA & Self-Hosted
+
+**Money Manager Vereine (Vereins-Edition)**
+- Alle Features der Standard-Edition
+- **PLUS:** Mitgliederverwaltung
+- **PLUS:** Vereinsspezifische Buchhaltung
+- **PLUS:** OR-Compliance & GV-Support
+- **PLUS:** QR-Rechnungen für Mitgliederbeiträge
+- **PLUS:** Spendenverwaltung
+
+### 🔄 Datenaustausch zwischen Editionen
+
+#### Architektur-Prinzipien
+1. **Shared Database Schema (Core Models)**
+   - Beide Editionen nutzen die gleichen Core Models (Account, Transaction, Category, etc.)
+   - Vereins-Edition erweitert diese mit zusätzlichen Models (Member, Membership, Donation, etc.)
+   - Standard-Edition kann Transaktionen von Vereins-Edition importieren (ohne Vereins-Metadaten)
+
+2. **Federation/Replication**
+   - Bereits implementiertes Federation-System (RSA-Signatur, Public Key Discovery)
+   - Vereine können mit privaten Instanzen Shared Accounts haben
+   - Beispiel: Vorstandsmitglied hat private Instanz + Vereins-Instanz, beide synchronisiert
+
+3. **Import/Export Schnittstellen**
+   - CSV/JSON Export aus Vereins-Edition → Import in Standard-Edition
+   - Bank Import Kompatibilität (beide nutzen gleiche Parser)
+   - API-kompatibel: Gleiche REST Endpoints für Core Funktionen
+
+#### Technische Implementierung
+
+```
+┌─────────────────────────────────┐       ┌─────────────────────────────────┐
+│  Money Manager (Standard)       │       │  Money Manager Vereine          │
+│                                 │       │                                 │
+│  - Account                      │◄─────►│  - Account (inherited)          │
+│  - Transaction                  │ RSA   │  - Transaction (inherited)      │
+│  - Category                     │ Sign  │  - Category (inherited)         │
+│  - User                         │       │  - User (inherited)             │
+│  - Federation                   │       │  - Federation (inherited)       │
+│                                 │       │                                 │
+│                                 │       │  + Member                       │
+│                                 │       │  + MembershipFee                │
+│                                 │       │  + Donation                     │
+│                                 │       │  + CostCenter                   │
+│                                 │       │  + Project                      │
+│                                 │       │  + Board                        │
+│                                 │       │  + AssociationSettings          │
+└─────────────────────────────────┘       └─────────────────────────────────┘
+         │                                           │
+         │                                           │
+         └───────────────┬───────────────────────────┘
+                         ▼
+                 Shared Database Schema
+                 (Core: alembic migrations)
+```
+
+#### API-Kompatibilität
+
+**Gleiche Endpoints (100% kompatibel):**
+- `/api/v1/accounts` - Account Management
+- `/api/v1/transactions` - Transaction CRUD
+- `/api/v1/categories` - Category Management
+- `/api/v1/bank-import` - CSV Import
+- `/api/v1/reconciliation` - Bank Reconciliation
+- `/api/v1/federation` - Instance Discovery
+- `/api/v1/replication` - Mirror Sync
+- `/api/v1/auth` - Authentication (Passkeys, OAuth)
+
+**Zusätzliche Endpoints (nur Vereine):**
+- `/api/v1/members` - Member Management
+- `/api/v1/memberships` - Membership Fees
+- `/api/v1/donations` - Donation Management
+- `/api/v1/cost-centers` - Cost Center Accounting
+- `/api/v1/projects` - Project/Event Management
+- `/api/v1/compliance` - OR Annual Reports
+- `/api/v1/qr-invoices` - Swiss QR-Code Generation
+
+### Repository-Struktur
+
+**Empfohlene Struktur:**
+```
+money-manager/                    # Standard Edition (dieses Repo)
+├── backend/
+├── frontend/
+├── docs/
+└── README.md
+
+money-manager-vereine/            # Vereine Edition (separates Repo)
+├── backend/
+│   ├── app/
+│   │   ├── models/
+│   │   │   ├── __init__.py       # Importiert von Standard + Vereine
+│   │   │   ├── member.py         # NEU: Vereine-spezifisch
+│   │   │   ├── membership.py     # NEU: Vereine-spezifisch
+│   │   │   └── donation.py       # NEU: Vereine-spezifisch
+│   │   ├── api/
+│   │   │   ├── members.py        # NEU: Vereine-spezifisch
+│   │   │   └── ...
+│   │   └── services/
+│   │       ├── qr_invoice_service.py  # NEU: Vereine-spezifisch
+│   │       └── ...
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Members.tsx       # NEU: Vereine-spezifisch
+│   │   │   ├── Compliance.tsx    # NEU: Vereine-spezifisch
+│   │   │   └── ...
+│   │   └── components/
+│   │       └── ...
+├── docs/
+│   ├── VEREINE_SETUP.md          # Setup-Guide für Vereine
+│   ├── OR_COMPLIANCE.md          # OR-Jahresrechnung Guide
+│   └── QR_INVOICE.md             # Swiss QR-Code Integration
+└── README.md                      # Vereine-spezifische Doku
+```
+
+**Shared Code (via Git Submodule oder Package):**
+- Option A: Git Submodule (Core Models als Submodule)
+- Option B: Python Package (money-manager-core als PyPI Package)
+- Option C: Code-Duplikation mit Manual Sync (einfacher, aber Wartungsaufwand)
+
+### 🎯 Warum Separate Edition?
+
+#### Vorteile
+1. **Klare Trennung** - Standard bleibt schlank für Privatpersonen
+2. **Spezialisierung** - Vereine-Features ohne Feature-Creep
+3. **Unabhängige Entwicklung** - Verschiedene Release-Zyklen
+4. **Unterschiedliche Zielgruppen** - Privat vs. Verein
+5. **Separate Dokumentation** - Vereins-spezifische Guides
+6. **Einfacheres Testing** - Keine Vereine-Tests in Standard-Edition
+
+#### Nachteile (und Lösungen)
+1. **Code-Duplikation** → Lösung: Shared Core Package
+2. **Doppelte Wartung** → Lösung: API-Kompatibilität gewährleistet
+3. **Migration Complex** → Lösung: Gleiche DB-Schema für Core Models
+
+### 📅 Entwicklungsplan
+
+**Phase 1: Foundation (Monat 1-2)**
+- [ ] Separates Repository erstellen
+- [ ] Core Models von Standard-Edition übernehmen
+- [ ] Build-Pipeline aufsetzen (Docker, CI/CD)
+- [ ] Basis-Frontend mit Standard-Features
+
+**Phase 2: Vereine-Models (Monat 2-3)**
+- [ ] Member, MembershipFee, Donation Models
+- [ ] CostCenter, Project, Board Models
+- [ ] Database Migrations
+- [ ] API Endpoints für Vereins-Features
+
+**Phase 3: Frontend (Monat 3-4)**
+- [ ] Mitgliederverwaltung UI
+- [ ] Beitragsverwaltung UI
+- [ ] Kostenstellen & Projekte UI
+- [ ] Dashboard für Vereine
+
+**Phase 4: Compliance & QR (Monat 4-5)**
+- [ ] OR-Jahresabschluss Generator
+- [ ] Swiss QR-Code Integration
+- [ ] GV-Unterlagen Export
+- [ ] Revisor-Reports
+
+**Phase 5: Testing & Docs (Monat 5-6)**
+- [ ] End-to-End Testing
+- [ ] Vereine-spezifische Dokumentation
+- [ ] Setup-Guides für verschiedene Vereinstypen
+- [ ] Beta-Testing mit echten Vereinen
+
+### 🏛️ Feature-Roadmap: Vereine Edition
+
+#### Mitgliederverwaltung
+- [ ] Mitglieder-Modul
+  - [ ] Mitglieder CRUD (Name, Adresse, Email, Telefon)
+  - [ ] Mitgliedsnummern (automatisch generiert)
+  - [ ] Mitgliedsstatus (Aktiv, Passiv, Ehrenmitglied, Ausgetreten)
+  - [ ] Beitrittsdatum & Austrittsdatum
+  - [ ] Kategorien (Aktivmitglied, Passivmitglied, Junioren, Senioren)
+  - [ ] Notizen & Custom Fields
+- [ ] Mitgliederbeiträge
+  - [ ] Beitragstypen (Jahresbeitrag, Eintrittsbeitrag, Zusatzbeiträge)
+  - [ ] Beitragsperioden (Jährlich, Halbjährlich, Quartalsweise)
+  - [ ] Beitragskategorien nach Alter/Typ
+  - [ ] Rabatte & Ermässigungen
+  - [ ] Automatische Beitragsberechnung
+- [ ] Zahlungsverwaltung
+  - [ ] Offene Posten pro Mitglied
+  - [ ] Mahnwesen (1. Mahnung, 2. Mahnung, Letzte Mahnung)
+  - [ ] Zahlungserinnerungen per Email
+  - [ ] QR-Rechnung Generierung (Swiss QR-Code)
+  - [ ] Automatische Zuordnung von Zahlungseingängen
+
+**Priority:** HIGH
+**Reason:** Core Feature für Vereine
+
+#### Vereinskassen-Buchhaltung
+- [ ] Vereinsspezifische Kontenstruktur
+  - [ ] Vereinskasse (Hauptkonto)
+  - [ ] Sparkonto / Anlagekonto
+  - [ ] Projektkassen (Events, Anlässe)
+  - [ ] Fonds & Rückstellungen
+- [ ] Kostenstellen
+  - [ ] Kostenstellen definieren (z.B. "Jugendförderung", "Vereinsanlass", "Unterhalt")
+  - [ ] Transaktionen Kostenstellen zuweisen
+  - [ ] Kostenstellen-Reporting
+  - [ ] Budget pro Kostenstelle
+- [ ] Projekt-Buchhaltung
+  - [ ] Projekte/Events erstellen (z.B. "Sommerfest 2025", "Jubiläum 50 Jahre")
+  - [ ] Einnahmen & Ausgaben pro Projekt tracken
+  - [ ] Projekt-Budget vs. Ist-Kosten
+  - [ ] Erfolgsrechnung pro Projekt
+- [ ] Vorstandsverwaltung
+  - [ ] Vorstandsmitglieder mit Funktionen (Präsident, Kassier, Aktuar, etc.)
+  - [ ] Amtsperioden
+  - [ ] Unterschriftsberechtigungen
+  - [ ] Sitzungsprotokolle (optional)
+
+**Priority:** HIGH
+**Reason:** Essentiell für professionelle Vereinsführung
+
+#### Schweizer Vereins-Compliance
+- [ ] Jahresabschluss nach OR (Obligationenrecht)
+  - [ ] Bilanz (Aktiven / Passiven)
+  - [ ] Erfolgsrechnung (Einnahmen / Ausgaben)
+  - [ ] Anhang zur Jahresrechnung
+  - [ ] Revisionsbericht-Vorlage
+- [ ] Revisorenwesen
+  - [ ] Revisoren erfassen
+  - [ ] Kontrollstelle zuweisen
+  - [ ] Revisionsbericht generieren
+  - [ ] Revisions-Checkliste
+- [ ] Budgetierung
+  - [ ] Jahresbudget erstellen
+  - [ ] Budget vs. Ist-Vergleich
+  - [ ] Budget-Kategorien nach Vereinsbedürfnissen
+  - [ ] Budgetvorschlag für Generalversammlung
+- [ ] Generalversammlung (GV) Support
+  - [ ] GV-Unterlagen Export
+  - [ ] Jahresbericht-Generator
+  - [ ] Mitgliederliste für Stimmrecht
+  - [ ] Protokoll-Vorlagen
+
+**Priority:** HIGH
+**Reason:** Rechtliche Anforderungen in CH
+
+#### Spendenverwaltung
+- [ ] Spender-Management
+  - [ ] Spender erfassen (Privatpersonen, Firmen)
+  - [ ] Spendenhistorie pro Spender
+  - [ ] Dauerspenden (monatlich, jährlich)
+  - [ ] Spendenkategorien (Allgemein, Zweckgebunden)
+- [ ] Spendenbescheinigungen
+  - [ ] Automatische Spendenbescheinigung-Generierung
+  - [ ] PDF Export mit Vereinsstempel
+  - [ ] Sammelbestätigung Jahresende
+  - [ ] ESTV-konforme Formulare (für Steuerabzug)
+- [ ] Spenden-Tracking
+  - [ ] Zweckgebundene Spenden verwalten
+  - [ ] Spendenverwendung dokumentieren
+  - [ ] Spenden-Reporting für Transparenz
+  - [ ] Dankesschreiben-Vorlagen
+
+**Priority:** MEDIUM
+**Reason:** Wichtig für gemeinnützige Vereine
+
+#### Vereins-Reporting
+- [ ] Schweizer Vereins-Reports
+  - [ ] Kassabericht (detailliert)
+  - [ ] Jahresrechnung nach Schweizer Standard
+  - [ ] Budget-Ist-Vergleich
+  - [ ] Mitgliederstatistik (Zu-/Abgänge)
+  - [ ] Beitragseinnahmen-Übersicht
+  - [ ] Offene Posten Liste
+- [ ] Export-Funktionen
+  - [ ] PDF Export für GV-Unterlagen
+  - [ ] Excel Export für Revisoren
+  - [ ] CSV für Buchhaltungssoftware
+  - [ ] Banana Accounting Export (beliebte CH Software)
+- [ ] Dashboard für Vorstand
+  - [ ] Vereinsvermögen Übersicht
+  - [ ] Mitgliederzahl & Entwicklung
+  - [ ] Offene Beiträge
+  - [ ] Nächste Zahlungen
+  - [ ] Budget-Status
+
+**Priority:** HIGH
+**Reason:** Vereinsvorstand braucht Transparenz
+
+#### QR-Rechnung Integration (Swiss QR-Code)
+- [ ] QR-Rechnung Generierung
+  - [ ] Swiss QR-Code gemäss Standard
+  - [ ] Strukturierte Referenznummer
+  - [ ] IBAN & Zahlungsempfänger aus Vereinsdaten
+  - [ ] Betrag & Währung (CHF/EUR)
+  - [ ] Verwendungszweck (Mitgliederbeitrag, Spende, etc.)
+- [ ] Massen-QR-Rechnung
+  - [ ] Alle offenen Beiträge als QR-Rechnungen
+  - [ ] PDF-Sammeldatei für Postversand
+  - [ ] Email-Versand mit QR-Rechnung Anhang
+- [ ] Zahlungsabgleich
+  - [ ] Camt.054 Import (Zahlungsavise)
+  - [ ] Automatische Zuordnung via QR-Referenz
+  - [ ] Offene Posten automatisch schliessen
+
+**Priority:** HIGH
+**Reason:** Standard in CH seit 2020, sehr wichtig für Vereine
+
+#### Vereins-Templates
+- [ ] Vorlagen für Schweizer Vereine
+  - [ ] Kontenplan-Vorlagen (Sportverein, Kulturverein, etc.)
+  - [ ] Kategorie-Templates
+  - [ ] Brief-Vorlagen (Zahlungserinnerung, Dankesschreiben)
+  - [ ] Protokoll-Vorlagen (GV, Vorstandssitzung)
+- [ ] Branchen-spezifisch
+  - [ ] Sportverein (Trainerbeiträge, Turniere, Material)
+  - [ ] Kulturverein (Konzerte, Ausstellungen, Mitgliederbeiträge)
+  - [ ] Gemeinnütziger Verein (Spenden, Projekte)
+  - [ ] Interessenverein (z.B. Quartierverein, Hobbyverein)
+
+**Priority:** MEDIUM
+**Reason:** Nice-to-have für schnellen Start
+
+#### Multi-Tenant für Vereine
+- [ ] Mandantenfähigkeit
+  - [ ] Mehrere Vereine pro Instanz
+  - [ ] Getrennte Buchhaltung pro Verein
+  - [ ] Getrennte Mitgliederdaten
+  - [ ] Zentrale Administration
+- [ ] Rollen & Berechtigungen
+  - [ ] Vorstand (voller Zugriff)
+  - [ ] Kassier (Finanz-Zugriff)
+  - [ ] Aktuar (Protokolle, Mitglieder)
+  - [ ] Revisor (Read-Only Finanz)
+  - [ ] Mitglied (eigene Daten ansehen)
+- [ ] Datenschutz
+  - [ ] DSGVO/FADP Compliance
+  - [ ] Mitglieder-Einwilligungen
+  - [ ] Datenexport für Mitglieder
+  - [ ] Löschkonzept
+
+**Priority:** LOW
+**Reason:** Für Hosting-Provider oder Dachverbände
+
+---
+
+### 💡 Vereins-Use Cases
+
+#### Use Case 1: Sportverein mit 150 Mitgliedern
+**Anforderungen:**
+- Mitgliederverwaltung mit Kategorien (Aktiv, Passiv, Junioren)
+- Jahresbeitrag CHF 120.- (Erwachsene), CHF 60.- (Junioren)
+- QR-Rechnungen per Email versenden
+- Trainerbeiträge verwalten
+- Event-Buchhaltung (Sommerfest, Jubiläum)
+- Jahresrechnung für GV
+
+**Lösung mit Vereine-Edition:**
+- Mitglieder erfassen mit Kategorien
+- Beitragstypen definieren
+- Automatische QR-Rechnung-Generierung Ende Jahr
+- Projekt "Sommerfest 2025" mit eigenem Budget
+- Jahresabschluss-Export als PDF für GV
+
+#### Use Case 2: Kulturverein mit Spenden
+**Anforderungen:**
+- 50 Mitglieder + 200 Spender
+- Mitgliederbeiträge CHF 50.-
+- Spendenverwaltung mit Bescheinigungen
+- Konzert-Organisation (Ticket-Einnahmen)
+- Gemeinnützig anerkannt (Steuerabzug)
+
+**Lösung mit Vereine-Edition:**
+- Mitglieder + Spender getrennt verwalten
+- Spendenbescheinigungen automatisch generieren
+- Projekt "Konzert Frühling 2025" mit Ticketeinnahmen
+- Zweckgebundene Spenden tracken
+- ESTV-konforme Formulare
+
+#### Use Case 3: Quartierverein
+**Anforderungen:**
+- 30 Mitglieder
+- Kleines Budget (~CHF 5'000.- / Jahr)
+- Quartalsfest organisieren
+- Einfache Buchhaltung für Vorstand
+- Revisor braucht Export
+
+**Lösung mit Vereine-Edition:**
+- Simple Mitgliederverwaltung
+- Projekt "Quartalsfest" mit Budget
+- Dashboard für Vorstand (aktueller Stand)
+- Excel-Export für Revisor
+- Jahresrechnung in 5 Minuten
+
+#### Use Case 4: Vorstandsmitglied mit beiden Editionen
+**Szenario:**
+- Person ist Kassier in Sportverein
+- Gleichzeitig private Money Manager Instanz
+- Will Vereins-Transaktionen NICHT in privater Instanz, aber Zugriff auf beide
+
+**Lösung:**
+- Vereins-Edition auf Vereins-Server (verein-buchhaltung.example.com)
+- Standard-Edition auf privatem Server (mein-geld.example.com)
+- Federation: Beide Instanzen können Shared Accounts haben (z.B. gemeinsames Haushaltskonto mit Partner)
+- Vorstand nutzt Vereine-Edition für Vereinsbuchhaltung
+- Privat nutzt Standard-Edition für persönliche Finanzen
+- Optional: Export aus Vereine → Import in Standard für Transparenz (z.B. Spesenabrechnung)
+
+---
+
+### 🎯 Vorteile: Separate Vereine-Edition
+
+#### Für Entwickler
+- ✅ **Clean Separation** - Keine If-Else "isVerein" Logik im Code
+- ✅ **Spezialisierte Features** - Vereins-Features ohne Kompromisse
+- ✅ **Unabhängige Releases** - Standard v1.5 ≠ Vereine v1.3
+- ✅ **Einfacheres Testing** - Nur relevante Tests pro Edition
+- ✅ **Klarere Dokumentation** - Separate Docs für separate Zielgruppen
+
+#### Für Benutzer
+- ✅ **Richtige Edition wählen** - Privat vs. Verein
+- ✅ **Keine Feature-Überfrachtung** - Standard bleibt schlank
+- ✅ **Spezialisierte UX** - UI optimiert für Vereins-Workflows
+- ✅ **Daten-Interoperabilität** - Bei Bedarf Austausch möglich
+
+#### Für Schweizer Vereine
+- ✅ **OR-Compliance out-of-the-box** - Rechtliche Anforderungen erfüllt
+- ✅ **QR-Rechnungen** - Swiss Payment Standard integriert
+- ✅ **Kostenlos & Self-Hosted** - CHF 0.- vs. CHF 240-600.- pro Jahr
+- ✅ **Datenschutz** - DSGVO/FADP konform, eigene Daten
+- ✅ **Federation** - Dachverbände + Sektionen können zusammenarbeiten
+
+### 📊 Vergleich: Standard vs. Vereine Edition
+
+| Feature | Standard | Vereine | Datenaustausch |
+|---------|----------|---------|----------------|
+| **Core Features** |
+| Account Management | ✅ | ✅ | 100% kompatibel |
+| Transactions | ✅ | ✅ | 100% kompatibel |
+| Bank Import | ✅ | ✅ | 100% kompatibel |
+| Reconciliation | ✅ | ✅ | 100% kompatibel |
+| Multi-Currency | ✅ | ✅ | 100% kompatibel |
+| Federation | ✅ | ✅ | 100% kompatibel |
+| Shared Accounts | ✅ | ✅ | 100% kompatibel |
+| Replication | ✅ | ✅ | 100% kompatibel |
+| PWA | ✅ | ✅ | N/A |
+| Passkeys/OAuth | ✅ | ✅ | N/A |
+| **Vereine Features** |
+| Mitgliederverwaltung | ❌ | ✅ | Export möglich |
+| Beitragsverwaltung | ❌ | ✅ | Export möglich |
+| Kostenstellen | ❌ | ✅ | Transaction-Level |
+| Projekt-Buchhaltung | ❌ | ✅ | Transaction-Level |
+| OR-Jahresabschluss | ❌ | ✅ | PDF Export |
+| QR-Rechnungen | ❌ | ✅ | N/A |
+| Spendenverwaltung | ❌ | ✅ | Export möglich |
+| GV-Unterlagen | ❌ | ✅ | PDF Export |
+| Revisoren-Reports | ❌ | ✅ | Excel Export |
+| **Target User** |
+| Privatpersonen | ✅ | ❌ | - |
+| Gemeinschaftskonten | ✅ | ✅ | Federation |
+| Kleine Vereine | ❌ | ✅ | - |
+| Große Vereine | ❌ | ✅ | - |
+| Dachverbände | ❌ | ✅ | Federation |
 
 ---
 
