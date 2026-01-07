@@ -21,16 +21,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      actions: none
-      checks: none
-      deployments: none
-      discussions: none
-      id-token: none
-      issues: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
 
     steps:
       - name: Checkout repository
@@ -70,16 +60,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      actions: none
-      checks: none
-      deployments: none
-      discussions: none
-      id-token: none
-      issues: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
 
     steps:
       - name: Checkout repository
