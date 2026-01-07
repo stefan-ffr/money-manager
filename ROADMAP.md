@@ -99,6 +99,61 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 - Protected Routes mit automatischer Redirect
 - User-freundliche Login/Register UI mit Biometrie-Support
 
+### OAuth2/OIDC Integration (Authentik, Keycloak) ✅ IMPLEMENTIERT
+- [x] Backend OAuth2 Configuration
+  - [x] Authlib Integration
+  - [x] OAuth Configuration in Settings
+  - [x] Authorization & Token Endpoints
+  - [x] Userinfo Endpoint Integration
+- [x] Frontend OAuth Support
+  - [x] OAuth Login Flow
+  - [x] Callback Handler
+  - [x] State Management für CSRF Protection
+- [x] Multi-Provider Support
+  - [x] Authentik Configuration
+  - [x] Keycloak Configuration
+  - [x] Generic OIDC Support
+
+**Priority:** MEDIUM
+**Reason:** Enterprise SSO Integration
+**Status:** ✅ Vollständig implementiert (2025-01-07)
+**Details:**
+- Backend: Authlib 1.3.0 mit OAuth2/OIDC Support
+- Frontend: OAuth Login Option neben Passkeys
+- Support für Authentik, Keycloak und generische OIDC Provider
+- Automatische User-Erstellung bei OAuth Login
+- CSRF-geschützt mit State Parameter
+
+### Progressive Web App (PWA) ✅ IMPLEMENTIERT
+- [x] Web App Manifest
+  - [x] App Icons (192px, 512px)
+  - [x] App Metadata
+  - [x] Display Mode Standalone
+- [x] Service Worker
+  - [x] Offline Cache Strategy
+  - [x] Network-First für API
+  - [x] Cache-First für Static Assets
+  - [x] Background Sync Vorbereitung
+- [x] Installation
+  - [x] Install Prompt Component
+  - [x] iOS Installation Instructions
+  - [x] Android/Desktop Auto-Prompt
+- [x] PWA Optimierung
+  - [x] Meta Tags für alle Plattformen
+  - [x] Apple Touch Icons
+  - [x] Theme Color
+  - [x] Viewport Optimierung
+
+**Priority:** HIGH
+**Reason:** Mobile-First User Experience
+**Status:** ✅ Vollständig implementiert (2025-01-07)
+**Details:**
+- Installierbar auf Chrome, Edge, Safari (iOS/macOS)
+- Offline-Support für bereits geladene Seiten
+- App-like Experience auf Smartphones
+- Smart Install Prompt (nach Delay, dismissable)
+- Funktioniert ohne App Store
+
 ### Mirror Instances (Replication)
 - [ ] MirrorInstance Model & API
   - [ ] Instance Configuration

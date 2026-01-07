@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { loginWithPasskey } from '../services/auth'
-import { KeyRound, AlertCircle } from 'lucide-react'
+import { loginWithPasskey, loginWithOAuth, getOAuthConfig, type OAuthConfig } from '../services/auth'
+import { KeyRound, AlertCircle, Shield } from 'lucide-react'
 
 function Login() {
   const [username, setUsername] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Load OAuth config on mount
+    getOAuthConfig().then(setOauthConfig)
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,6 +26,18 @@ function Login() {
     } catch (err: any) {
       setError(err.message || 'Login fehlgeschlagen')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOAuthLogin = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await loginWithOAuth()
+      // Will redirect to OAuth provider
+    } catch (err: any) {
+      setError(err.message || 'OAuth Login fehlgeschlagen')
       setLoading(false)
     }
   }
@@ -94,6 +112,31 @@ function Login() {
             </p>
           </div>
         </form>
+
+        {/* OAuth Login Option */}
+        {oauthConfig?.enabled && (
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-gray-500">Oder</span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={handleOAuthLogin}
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Shield className="h-5 w-5 mr-2 text-green-600" />
+                Mit SSO anmelden (Authentik/Keycloak)
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <div className="relative">

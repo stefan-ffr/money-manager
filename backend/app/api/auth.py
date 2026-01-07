@@ -340,3 +340,189 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         "is_superuser": current_user.is_superuser,
         "created_at": current_user.created_at,
     }
+
+
+# ============================================================================
+# OAuth2/OIDC Endpoints (Authentik, Keycloak, etc.)
+# ============================================================================
+
+from authlib.integrations.starlette_client import OAuth
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
+
+# OAuth state storage (in production, use Redis)
+oauth_states = {}
+
+# Initialize OAuth client
+oauth = OAuth()
+if settings.OAUTH_ENABLED:
+    oauth.register(
+        name='oidc',
+        client_id=settings.OAUTH_CLIENT_ID,
+        client_secret=settings.OAUTH_CLIENT_SECRET,
+        server_metadata_url=None,  # We configure manually
+        authorize_url=settings.OAUTH_AUTHORIZATION_URL,
+        access_token_url=settings.OAUTH_TOKEN_URL,
+        client_kwargs={
+            'scope': settings.OAUTH_SCOPES,
+        }
+    )
+
+
+class OAuthLoginRequest(BaseModel):
+    """Request to get OAuth login URL"""
+    pass
+
+
+@router.get("/auth/oauth/config")
+async def get_oauth_config():
+    """Get OAuth configuration for frontend"""
+    return {
+        "enabled": settings.OAUTH_ENABLED,
+        "authorization_url": settings.OAUTH_AUTHORIZATION_URL if settings.OAUTH_ENABLED else None,
+        "client_id": settings.OAUTH_CLIENT_ID if settings.OAUTH_ENABLED else None,
+        "redirect_uri": settings.OAUTH_REDIRECT_URI if settings.OAUTH_ENABLED else None,
+        "scopes": settings.OAUTH_SCOPES if settings.OAUTH_ENABLED else None,
+    }
+
+
+@router.get("/auth/oauth/login")
+async def oauth_login(request: Request):
+    """
+    Redirect to OAuth provider (Authentik, Keycloak, etc.)
+
+    This endpoint redirects the user to the OAuth provider's authorization page.
+    """
+    if not settings.OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OAuth authentication is not enabled"
+        )
+
+    # Generate state for CSRF protection
+    state = secrets.token_urlsafe(32)
+    oauth_states[state] = True
+
+    # Build authorization URL
+    redirect_uri = settings.OAUTH_REDIRECT_URI
+    scope = settings.OAUTH_SCOPES
+
+    auth_url = (
+        f"{settings.OAUTH_AUTHORIZATION_URL}"
+        f"?client_id={settings.OAUTH_CLIENT_ID}"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_type=code"
+        f"&scope={scope}"
+        f"&state={state}"
+    )
+
+    return {"authorization_url": auth_url, "state": state}
+
+
+class OAuthCallbackRequest(BaseModel):
+    code: str
+    state: str
+
+
+@router.post("/auth/oauth/callback", response_model=TokenResponse)
+async def oauth_callback(
+    request: OAuthCallbackRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Handle OAuth callback from provider
+
+    Exchanges authorization code for access token and creates/updates user
+    """
+    if not settings.OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OAuth authentication is not enabled"
+        )
+
+    # Verify state
+    if request.state not in oauth_states:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid state parameter"
+        )
+
+    # Clean up state
+    del oauth_states[request.state]
+
+    try:
+        # Exchange code for token
+        import httpx
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                settings.OAUTH_TOKEN_URL,
+                data={
+                    "grant_type": "authorization_code",
+                    "code": request.code,
+                    "redirect_uri": settings.OAUTH_REDIRECT_URI,
+                    "client_id": settings.OAUTH_CLIENT_ID,
+                    "client_secret": settings.OAUTH_CLIENT_SECRET,
+                }
+            )
+
+            if token_response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to exchange code for token"
+                )
+
+            token_data = token_response.json()
+            access_token = token_data.get("access_token")
+
+            # Get user info from provider
+            userinfo_response = await client.get(
+                settings.OAUTH_USERINFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+
+            if userinfo_response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to get user info"
+                )
+
+            userinfo = userinfo_response.json()
+
+            # Extract user data
+            email = userinfo.get("email")
+            username = userinfo.get("preferred_username") or userinfo.get("sub")
+
+            if not email or not username:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid user info from provider"
+                )
+
+            # Find or create user
+            user = db.query(User).filter(User.email == email).first()
+
+            if not user:
+                # Create new user from OAuth
+                user = User(
+                    email=email,
+                    username=username,
+                    is_active=True,
+                    is_superuser=False
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+
+            # Generate our JWT token
+            jwt_token = create_access_token({"sub": str(user.id)})
+
+            return {
+                "access_token": jwt_token,
+                "token_type": "bearer"
+            }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"OAuth callback failed: {str(e)}"
+        )

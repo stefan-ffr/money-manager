@@ -187,3 +187,97 @@ export function setupAxiosInterceptor(): void {
     }
   )
 }
+
+// ============================================================================
+// OAuth2/OIDC Functions (Authentik, Keycloak, etc.)
+// ============================================================================
+
+export interface OAuthConfig {
+  enabled: boolean
+  authorization_url: string | null
+  client_id: string | null
+  redirect_uri: string | null
+  scopes: string | null
+}
+
+/**
+ * Get OAuth configuration from backend
+ */
+export async function getOAuthConfig(): Promise<OAuthConfig> {
+  try {
+    const response = await axios.get(`${API_URL}/api/v1/auth/oauth/config`)
+    return response.data
+  } catch (error) {
+    console.error('Failed to get OAuth config:', error)
+    return {
+      enabled: false,
+      authorization_url: null,
+      client_id: null,
+      redirect_uri: null,
+      scopes: null,
+    }
+  }
+}
+
+/**
+ * Start OAuth login flow
+ * Redirects user to OAuth provider (Authentik, Keycloak, etc.)
+ */
+export async function loginWithOAuth(): Promise<void> {
+  try {
+    const response = await axios.get(`${API_URL}/api/v1/auth/oauth/login`)
+    const { authorization_url, state } = response.data
+
+    // Store state for verification after redirect
+    sessionStorage.setItem('oauth_state', state)
+
+    // Redirect to OAuth provider
+    window.location.href = authorization_url
+  } catch (error: any) {
+    console.error('OAuth login failed:', error)
+    throw new Error(
+      error.response?.data?.detail || 'OAuth login failed. Please try again.'
+    )
+  }
+}
+
+/**
+ * Handle OAuth callback after redirect from provider
+ */
+export async function handleOAuthCallback(
+  code: string,
+  state: string
+): Promise<AuthTokens> {
+  try {
+    // Verify state matches what we stored
+    const storedState = sessionStorage.getItem('oauth_state')
+    if (!storedState || storedState !== state) {
+      throw new Error('Invalid OAuth state. Possible CSRF attack.')
+    }
+
+    // Exchange code for token
+    const response = await axios.post(`${API_URL}/api/v1/auth/oauth/callback`, {
+      code,
+      state,
+    })
+
+    const tokens: AuthTokens = {
+      access_token: response.data.access_token,
+      token_type: response.data.token_type,
+    }
+
+    // Store token
+    localStorage.setItem('access_token', tokens.access_token)
+
+    // Clean up state
+    sessionStorage.removeItem('oauth_state')
+
+    return tokens
+  } catch (error: any) {
+    console.error('OAuth callback failed:', error)
+    sessionStorage.removeItem('oauth_state')
+    throw new Error(
+      error.response?.data?.detail || 'OAuth authentication failed. Please try again.'
+    )
+  }
+}

@@ -10,6 +10,16 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # OAuth2/OIDC (Authentik, Keycloak, etc.)
+    OAUTH_ENABLED: bool = False
+    OAUTH_CLIENT_ID: str = ""
+    OAUTH_CLIENT_SECRET: str = ""
+    OAUTH_AUTHORIZATION_URL: str = ""
+    OAUTH_TOKEN_URL: str = ""
+    OAUTH_USERINFO_URL: str = ""
+    OAUTH_REDIRECT_URI: str = "http://localhost:3000/auth/callback"
+    OAUTH_SCOPES: str = "openid email profile"
     
     # Telegram
     TELEGRAM_BOT_TOKEN: str = ""
