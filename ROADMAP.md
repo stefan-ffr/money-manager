@@ -75,23 +75,29 @@ Alle Features in v1.0 sind **implementiert und produktionsreif**!
 
 ## 🔧 v1.1 - Security & Sync (Q1 2025)
 
-### Passkey Authentication (WebAuthn)
-- [ ] Backend WebAuthn Integration
-  - [ ] User Model erweitern
-  - [ ] Registration/Login Endpoints
-  - [ ] Credential Storage
-- [ ] Frontend Passkey Flow
-  - [ ] Registration UI
-  - [ ] Login UI mit Biometrie
-  - [ ] Multi-Device Support
-- [ ] Session Management
-  - [ ] JWT Tokens
-  - [ ] Refresh Token Logic
-  - [ ] Timeout Handling
+### Passkey Authentication (WebAuthn) ✅ IMPLEMENTIERT
+- [x] Backend WebAuthn Integration
+  - [x] User Model erweitern
+  - [x] Registration/Login Endpoints
+  - [x] Credential Storage
+- [x] Frontend Passkey Flow
+  - [x] Registration UI
+  - [x] Login UI mit Biometrie
+  - [x] Multi-Device Support
+- [x] Session Management
+  - [x] JWT Tokens
+  - [x] Refresh Token Logic
+  - [x] Timeout Handling
 
-**Priority:** HIGH  
-**Reason:** Essenziell für Production Security  
-**Implementierung:** Code-Beispiele in SECURITY.md vorhanden
+**Priority:** HIGH
+**Reason:** Essenziell für Production Security
+**Status:** ✅ Vollständig implementiert (2025-01-07)
+**Details:**
+- Backend: WebAuthn 2.2.0 mit vollständiger Registration/Login Flow
+- Frontend: @simplewebauthn/browser 9.0.1 mit React Context
+- JWT-basierte Session Management
+- Protected Routes mit automatischer Redirect
+- User-freundliche Login/Register UI mit Biometrie-Support
 
 ### Mirror Instances (Replication)
 - [ ] MirrorInstance Model & API
