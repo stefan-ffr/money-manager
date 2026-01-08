@@ -4,6 +4,18 @@ from app.core.config import settings
 from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation
 from app.core.database import engine, SessionLocal
 from app.models import base
+import os
+
+# Read version from VERSION file
+def get_version():
+    version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "VERSION")
+    try:
+        with open(version_file, "r") as f:
+            return f.read().strip()
+    except:
+        return "1.1.0"  # Fallback
+
+VERSION = get_version()
 
 # Create database tables
 base.Base.metadata.create_all(bind=engine)
@@ -11,7 +23,7 @@ base.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Money Manager API",
     description="Self-hosted personal finance management with federation support",
-    version="1.0.0",
+    version=VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -42,7 +54,7 @@ app.include_router(reconciliation.router, prefix="/api/v1", tags=["reconciliatio
 async def root():
     return {
         "message": "Money Manager API",
-        "version": "1.0.0",
+        "version": VERSION,
         "docs": "/docs",
         "instance": settings.INSTANCE_DOMAIN,
         "federation_enabled": settings.FEDERATION_ENABLED,
@@ -61,7 +73,7 @@ async def instance_info():
 
     return {
         "instance_id": settings.INSTANCE_DOMAIN,
-        "version": "1.0.0",
+        "version": VERSION,
         "public_key": get_public_key_pem(),
         "api_endpoint": f"https://{settings.INSTANCE_DOMAIN}/api/v1",
         "federation_enabled": settings.FEDERATION_ENABLED,
