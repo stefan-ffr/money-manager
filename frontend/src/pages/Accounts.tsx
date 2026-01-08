@@ -24,8 +24,9 @@ interface Account {
 }
 
 const accountTypes = [
-  { value: 'checking', label: 'Girokonto', icon: Building2 },
+  { value: 'checking', label: 'Privatkonto', icon: Building2 },
   { value: 'savings', label: 'Sparkonto', icon: Banknote },
+  { value: 'pillar3a', label: 'Säule 3a', icon: Banknote },
   { value: 'credit_card', label: 'Kreditkarte', icon: CreditCard },
   { value: 'cash', label: 'Bargeld', icon: Wallet },
 ]
