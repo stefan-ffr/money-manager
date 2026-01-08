@@ -18,20 +18,24 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 - [x] Einstellungen - Telegram Bot (Anleitung)
 - [x] Einstellungen - Kategorien (Platzhalter)
 - [x] Einstellungen - Sicherheit (Info)
+- [x] Bank CSV Import UI (Upload, Bank-Auswahl, Auto-Match, Setup Modal, Ergebnis-Anzeige)
 
 ## 🔴 Kritisch - Kern-Features fehlen
 
 ### 1. Bank CSV Import UI
-**Status:** ❌ Fehlt komplett
+**Status:** ✅ FERTIG (2026-01-08 19:15)
 **Backend:** ✅ `/api/v1/import/bank/import` + `/api/v1/import/bank/setup`
 **Beschreibung:**
-- Upload-Seite für CSV Dateien
-- Bank-Auswahl (PostFinance, UBS, Raiffeisen, ZKB, CS)
-- Auto-Matching Konfiguration anzeigen
-- Import-Ergebnis anzeigen (erfolgreiche Imports, Duplikate)
-- Integration in Navigation/Dashboard
+- ✅ Upload-Seite für CSV Dateien mit Drag & Drop
+- ✅ Bank-Auswahl (PostFinance, UBS, Raiffeisen, ZKB, CS)
+- ✅ Auto-Matching Konfiguration (Konto automatisch erkennen)
+- ✅ Import-Ergebnis anzeigen (erfolgreiche Imports, Duplikate, Fehler)
+- ✅ Integration in Navigation als "Bank Import"
+- ✅ Bank Setup Modal für IBAN-Konfiguration
+- ✅ Unterstützte Banken Sidebar mit Details
+- ✅ Anleitung für Benutzer
 
-**Priorität:** 🔥 SEHR HOCH (Kern-Feature laut Doku)
+**Priorität:** ✅ IMPLEMENTIERT
 
 ### 2. Shared Accounts (Gemeinschaftskonten)
 **Status:** ❌ Nur Platzhalter

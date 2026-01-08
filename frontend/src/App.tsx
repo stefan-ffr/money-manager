@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Accounts from './pages/Accounts'
 import Transactions from './pages/Transactions'
 import SharedAccounts from './pages/SharedAccounts'
+import BankImport from './pages/BankImport'
 import Reconciliation from './pages/Reconciliation'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/accounts" element={<Accounts />} />
                 <Route path="/transactions" element={<Transactions />} />
                 <Route path="/shared-accounts" element={<SharedAccounts />} />
+                <Route path="/bank-import" element={<BankImport />} />
                 <Route path="/reconciliation" element={<Reconciliation />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
