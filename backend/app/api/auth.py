@@ -18,6 +18,7 @@ from webauthn.helpers.structs import (
     AuthenticatorAttachment,
     AuthenticatorSelectionCriteria,
     ResidentKeyRequirement,
+    AttestationConveyancePreference,
 )
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 
@@ -100,7 +101,7 @@ async def begin_registration(
         user_id=str(user.id).encode(),
         user_name=request.username,
         user_display_name=request.email,
-        attestation="none",  # For simplicity, can be "direct" for more security
+        attestation=AttestationConveyancePreference.NONE,
         authenticator_selection=AuthenticatorSelectionCriteria(
             authenticator_attachment=AuthenticatorAttachment.PLATFORM,
             resident_key=ResidentKeyRequirement.PREFERRED,
