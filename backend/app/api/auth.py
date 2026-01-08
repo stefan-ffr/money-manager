@@ -16,6 +16,8 @@ from webauthn.helpers.structs import (
     PublicKeyCredentialDescriptor,
     UserVerificationRequirement,
     AuthenticatorAttachment,
+    AuthenticatorSelectionCriteria,
+    ResidentKeyRequirement,
 )
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 
@@ -99,11 +101,11 @@ async def begin_registration(
         user_name=request.username,
         user_display_name=request.email,
         attestation="none",  # For simplicity, can be "direct" for more security
-        authenticator_selection={
-            "authenticator_attachment": AuthenticatorAttachment.PLATFORM,
-            "resident_key": "preferred",
-            "user_verification": UserVerificationRequirement.PREFERRED,
-        },
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.PREFERRED,
+        ),
         supported_pub_key_algs=[
             COSEAlgorithmIdentifier.ECDSA_SHA_256,
             COSEAlgorithmIdentifier.RSASSA_PKCS1_v1_5_SHA_256,
