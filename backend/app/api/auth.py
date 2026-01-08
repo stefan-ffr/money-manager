@@ -279,11 +279,15 @@ async def complete_authentication(
     # Convert credential ID to bytes for lookup
     from base64 import urlsafe_b64decode
     try:
+        # Add padding if necessary for base64url
+        padding = 4 - (len(credential_id) % 4)
+        if padding and padding != 4:
+            credential_id += '=' * padding
         credential_id_bytes = urlsafe_b64decode(credential_id)
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid credential ID format"
+            detail=f"Invalid credential ID format: {str(e)}"
         )
 
     cred = db.query(WebAuthnCredential).filter(
