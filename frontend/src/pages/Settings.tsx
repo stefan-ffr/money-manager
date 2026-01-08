@@ -144,6 +144,14 @@ function GeneralSettings() {
 function FederationSettings() {
   const [testUrl, setTestUrl] = useState('')
 
+  const { data: instance } = useQuery({
+    queryKey: ['instance'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/auth/instance`)
+      return res.data
+    },
+  })
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Federation Einstellungen</h2>
@@ -151,9 +159,9 @@ function FederationSettings() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-medium text-blue-900 mb-2">🔐 Deine Instanz</h3>
         <p className="text-sm text-blue-700 mb-2">
-          Domain: <code className="bg-blue-100 px-2 py-1 rounded">money.babsyit.ch</code>
+          Domain: <code className="bg-blue-100 px-2 py-1 rounded">{instance?.domain || 'Laden...'}</code>
         </p>
-        <p className="text-sm text-blue-700">Status: ✅ Aktiviert</p>
+        <p className="text-sm text-blue-700">Status: {instance?.enabled ? '✅ Aktiviert' : '⏸️ Deaktiviert'}</p>
       </div>
 
       <div>

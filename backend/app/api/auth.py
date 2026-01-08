@@ -349,6 +349,16 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     }
 
 
+# Instance info endpoint
+@router.get("/auth/instance")
+async def get_instance_info():
+    """Get instance domain information"""
+    return {
+        "domain": settings.INSTANCE_DOMAIN,
+        "enabled": True,
+    }
+
+
 # ============================================================================
 # OAuth2/OIDC Endpoints (Authentik, Keycloak, etc.)
 # ============================================================================
