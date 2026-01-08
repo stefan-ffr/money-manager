@@ -19,6 +19,7 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 - [x] Einstellungen - Kategorien (Platzhalter)
 - [x] Einstellungen - Sicherheit (Info)
 - [x] Bank CSV Import UI (Upload, Bank-Auswahl, Auto-Match, Setup Modal, Ergebnis-Anzeige)
+- [x] Shared Accounts UI (Erstellen, Mitglieder, Split Transactions, Balance, Settlement)
 
 ## 🔴 Kritisch - Kern-Features fehlen
 
@@ -38,17 +39,19 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 **Priorität:** ✅ IMPLEMENTIERT
 
 ### 2. Shared Accounts (Gemeinschaftskonten)
-**Status:** ❌ Nur Platzhalter
+**Status:** ✅ FERTIG (2026-01-08 19:25)
 **Backend:** ✅ Komplett implementiert
 **Beschreibung:**
-- Shared Accounts Liste
-- Neues Shared Account erstellen (Name, Beschreibung, Währung)
-- Mitglieder hinzufügen (User Identifier, Instance URL, Rolle)
-- Split Transaction erstellen (Wer hat bezahlt, Betrag, Split-Type)
-- Balance anzeigen (Wer schuldet wem)
-- Settlement anzeigen (Optimale Abrechnung)
+- ✅ Shared Accounts Liste mit Cards
+- ✅ Neues Shared Account erstellen (Name, Beschreibung, Währung)
+- ✅ Details Modal mit 3 Tabs (Mitglieder, Transaktionen, Abrechnung)
+- ✅ Mitglieder hinzufügen (User Identifier, Instance URL, Rolle)
+- ✅ Split Transaction erstellen (Wer hat bezahlt, Betrag, Split-Type: equal/percentage/custom)
+- ✅ Balance anzeigen (Wer schuldet wem mit farblicher Kennzeichnung)
+- ✅ Settlement anzeigen (Optimale Abrechnung mit Greedy-Algorithmus)
+- ✅ Federation-ready (Instanz URL für externe Mitglieder)
 
-**Priorität:** 🔥 SEHR HOCH (Kern-Feature laut Doku - "Cross-Instance Shared Accounts")
+**Priorität:** ✅ IMPLEMENTIERT
 
 ### 3. Receipt Upload bei Transaktionen
 **Status:** ❌ Fehlt
