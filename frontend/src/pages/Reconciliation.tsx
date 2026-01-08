@@ -10,7 +10,7 @@ import {
   Plus
 } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 type MatchStatus = 'matched' | 'unmatched_bank' | 'unmatched_app' | 'pending'
 

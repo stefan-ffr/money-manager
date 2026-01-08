@@ -12,7 +12,7 @@ import {
   Key
 } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 type Tab = 'general' | 'federation' | 'mirrors' | 'telegram' | 'categories' | 'security'
 

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 export interface User {
   id: number
