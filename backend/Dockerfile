@@ -12,14 +12,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy VERSION file from parent directory
-COPY ../VERSION /app/VERSION
+# Copy VERSION file from root directory
+COPY VERSION /app/VERSION
 
 # Copy application code
-COPY . .
+COPY backend/ .
 
 # Create receipts directory with proper permissions
 RUN mkdir -p /app/receipts /app/secrets && \
