@@ -20,6 +20,7 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 - [x] Einstellungen - Sicherheit (Info)
 - [x] Bank CSV Import UI (Upload, Bank-Auswahl, Auto-Match, Setup Modal, Ergebnis-Anzeige)
 - [x] Shared Accounts UI (Erstellen, Mitglieder, Split Transactions, Balance, Settlement)
+- [x] Receipt Upload (Beleg hochladen, anzeigen, herunterladen für Transaktionen)
 
 ## 🔴 Kritisch - Kern-Features fehlen
 
@@ -54,15 +55,16 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 **Priorität:** ✅ IMPLEMENTIERT
 
 ### 3. Receipt Upload bei Transaktionen
-**Status:** ❌ Fehlt
+**Status:** ✅ FERTIG (2026-01-09 10:30)
 **Backend:** ✅ `/api/v1/transactions/{id}/receipt`
 **Beschreibung:**
-- Upload-Button in Transaktion-Formular
-- Upload-Button in Transaktionen-Liste
-- Beleg-Vorschau (PDF/Bild)
-- Beleg-Download
+- ✅ Upload-Button in Transaktionen-Liste (Auge-Icon wenn vorhanden, Upload-Icon wenn nicht)
+- ✅ Beleg-Vorschau Modal (PDF mit iframe, Bilder mit img tag)
+- ✅ Beleg-Download Button
+- ✅ File Upload mit automatischer Invalidierung
+- ✅ Backend-Fix: TransactionUpdate Schema um requires_confirmation erweitert
 
-**Priorität:** 🔥 HOCH
+**Priorität:** ✅ IMPLEMENTIERT
 
 ## 🟡 Wichtig - Vervollständigung
 
@@ -140,12 +142,12 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 
 ## 📋 Implementierungs-Reihenfolge
 
-**Phase 1: Kritische Features** (Nächste 3-5 Steps)
+**Phase 1: Kritische Features** ✅ ABGESCHLOSSEN
 1. ✅ Bank CSV Import UI
 2. ✅ Shared Accounts - Basic CRUD
 3. ✅ Shared Accounts - Split Transactions
 4. ✅ Shared Accounts - Balance & Settlement
-5. ✅ Receipt Upload
+5. ✅ Receipt Upload bei Transaktionen
 
 **Phase 2: Vervollständigung** (Danach)
 6. Categories Management
@@ -168,5 +170,21 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 
 ---
 
-**Letztes Update:** 2026-01-08 19:10 (nach Transaktions-Form Implementierung)
-**Nächster Schritt:** Bank CSV Import UI implementieren
+## 🆕 Neue Feature-Requests
+
+### Konten-Seite: MS Money 99 Style
+**Beschreibung:**
+- Oberer Teil: Konten-Übersicht (wie aktuell)
+- Unteres Drittel: Transaktion-Details mit CRUD
+  - Felder zum Anlegen von Einträgen
+  - Löschen-Funktion
+  - Verschieben-Funktion
+  - Editieren-Funktion
+- Layout ähnlich MS Money 99
+
+**Status:** ⏳ Geplant
+
+---
+
+**Letztes Update:** 2026-01-09 10:35 (nach Receipt Upload Implementierung)
+**Nächster Schritt:** Konten-Seite im MS Money 99 Stil oder Categories Management

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { AlertCircle, CheckCircle, Clock, PlusCircle, X } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, PlusCircle, X, Upload, FileText, Eye } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -28,6 +28,7 @@ interface Account {
 
 function TransactionList() {
   const [showAddModal, setShowAddModal] = useState(false)
+  const [receiptPreview, setReceiptPreview] = useState<{ transactionId: number; path: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data: transactions, isLoading } = useQuery({
@@ -66,6 +67,36 @@ function TransactionList() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
+
+  const uploadReceiptMutation = useMutation({
+    mutationFn: async ({ transactionId, file }: { transactionId: number; file: File }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      await axios.post(`${API_URL}/api/v1/transactions/${transactionId}/receipt`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+
+  const handleReceiptUpload = (transactionId: number) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,application/pdf'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        uploadReceiptMutation.mutate({ transactionId, file })
+      }
+    }
+    input.click()
+  }
+
+  const handleReceiptPreview = (transactionId: number) => {
+    setReceiptPreview({ transactionId, path: `${API_URL}/api/v1/transactions/${transactionId}/receipt` })
+  }
 
   if (isLoading) {
     return (
@@ -176,21 +207,42 @@ function TransactionList() {
                       CHF {Math.abs(tx.amount).toFixed(2)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                    {tx.requires_confirmation && (
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <div className="flex justify-end items-center gap-2">
+                      {tx.requires_confirmation && (
+                        <button
+                          onClick={() => confirmMutation.mutate(tx.id)}
+                          className="text-green-600 hover:text-green-900 font-medium"
+                          title="Bestätigen"
+                        >
+                          ✓
+                        </button>
+                      )}
+                      {tx.receipt_path ? (
+                        <button
+                          onClick={() => handleReceiptPreview(tx.id)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Beleg anzeigen"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReceiptUpload(tx.id)}
+                          className="text-gray-600 hover:text-gray-900"
+                          title="Beleg hochladen"
+                        >
+                          <Upload className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => confirmMutation.mutate(tx.id)}
-                        className="text-green-600 hover:text-green-900 font-medium"
+                        onClick={() => deleteMutation.mutate(tx.id)}
+                        className="text-red-600 hover:text-red-900 font-medium"
+                        title="Löschen"
                       >
-                        ✓ Bestätigen
+                        X
                       </button>
-                    )}
-                    <button
-                      onClick={() => deleteMutation.mutate(tx.id)}
-                      className="text-red-600 hover:text-red-900 font-medium"
-                    >
-                      Löschen
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -225,6 +277,14 @@ function TransactionList() {
             queryClient.invalidateQueries({ queryKey: ['transactions'] })
             queryClient.invalidateQueries({ queryKey: ['accounts'] })
           }}
+        />
+      )}
+
+      {receiptPreview && (
+        <ReceiptPreviewModal
+          transactionId={receiptPreview.transactionId}
+          receiptUrl={receiptPreview.path}
+          onClose={() => setReceiptPreview(null)}
         />
       )}
     </div>
@@ -408,6 +468,60 @@ function TransactionModal({ accounts, onClose, onSuccess }: TransactionModalProp
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+interface ReceiptPreviewModalProps {
+  transactionId: number
+  receiptUrl: string
+  onClose: () => void
+}
+
+function ReceiptPreviewModal({ transactionId, receiptUrl, onClose }: ReceiptPreviewModalProps) {
+  const isPDF = receiptUrl.toLowerCase().includes('.pdf')
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="w-6 h-6" />
+            Beleg Vorschau
+          </h2>
+          <div className="flex gap-2">
+            <a
+              href={receiptUrl}
+              download
+              className="text-primary-600 hover:text-primary-700 px-4 py-2 border border-primary-600 rounded-lg"
+            >
+              Download
+            </a>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-6">
+          {isPDF ? (
+            <iframe
+              src={receiptUrl}
+              className="w-full h-full min-h-[600px] border border-gray-200 rounded"
+              title={`Receipt for transaction ${transactionId}`}
+            />
+          ) : (
+            <img
+              src={receiptUrl}
+              alt={`Receipt for transaction ${transactionId}`}
+              className="max-w-full h-auto mx-auto"
+            />
+          )}
+        </div>
       </div>
     </div>
   )
