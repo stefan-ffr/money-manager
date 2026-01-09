@@ -93,7 +93,7 @@ function Accounts() {
     queryFn: async () => {
       if (!selectedAccountId) return []
       const res = await axios.get<Transaction[]>(
-        `${API_URL}/api/v1/transactions?account_id=${selectedAccountId}`
+        `${API_URL}/api/v1/transactions/?account_id=${selectedAccountId}`
       )
       return res.data
     },

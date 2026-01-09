@@ -34,7 +34,7 @@ function TransactionList() {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions'],
     queryFn: async () => {
-      const res = await axios.get<Transaction[]>(`${API_URL}/api/v1/transactions`)
+      const res = await axios.get<Transaction[]>(`${API_URL}/api/v1/transactions/`)
       return res.data
     },
   })
