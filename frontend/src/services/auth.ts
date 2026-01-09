@@ -158,6 +158,9 @@ export function getAccessToken(): string | null {
  * Axios interceptor to add auth token to all requests
  */
 export function setupAxiosInterceptor(): void {
+  // Configure axios to send cookies with all requests
+  axios.defaults.withCredentials = true
+
   axios.interceptors.request.use(
     (config) => {
       const token = getAccessToken()
