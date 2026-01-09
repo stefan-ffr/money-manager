@@ -7,8 +7,6 @@ import {
   Wallet,
   Building2,
   Banknote,
-  Pencil,
-  Trash2,
   X,
   Save,
   ArrowRightLeft,
@@ -107,16 +105,6 @@ function Accounts() {
       setSelectedAccountId(accounts[0].id)
     }
   }, [accounts, selectedAccountId])
-
-  const deleteAccountMutation = useMutation({
-    mutationFn: async (accountId: number) => {
-      await axios.delete(`${API_URL}/api/v1/accounts/${accountId}`)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      setSelectedAccountId(null)
-    },
-  })
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
