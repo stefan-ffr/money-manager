@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      # Prüfe alle 5 Minuten auf Updates
+      WATCHTOWER_POLL_INTERVAL: 300
+
+      # Cleanup: Alte Images entfernen
+      WATCHTOWER_CLEANUP: "true"
+
+      # Nur Container mit diesem Label überwachen
+      WATCHTOWER_LABEL_ENABLE: "true"
+
+      # Notifications (optional)
+      WATCHTOWER_NOTIFICATIONS: shoutrrr
+      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:-}
+
+      # Debugging (auf false setzen für Produktion)
+      WATCHTOWER_DEBUG: "false"
+
+      # Rolling Updates (ein Container nach dem anderen)
+      WATCHTOWER_ROLLING_RESTART: "true"
+
+      # Zeitzone
+      TZ: Europe/Zurich
+
+    volumes:
+      # Docker socket für Zugriff auf Container
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    # Optional: Ressourcen-Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M

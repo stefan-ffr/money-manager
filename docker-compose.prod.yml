@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: money-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-money}
+      POSTGRES_USER: ${POSTGRES_USER:-money}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-money}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - money-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"  # PostgreSQL nicht auto-updaten
+
+  backend:
+    image: ghcr.io/stefan-ffr/money-manager-backend:latest
+    container_name: money-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-money}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-money}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
+      INSTANCE_DOMAIN: ${INSTANCE_DOMAIN:-localhost}
+      FEDERATION_ENABLED: ${FEDERATION_ENABLED:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      RECEIPTS_PATH: ${RECEIPTS_PATH:-/app/receipts}
+    volumes:
+      - ./receipts:/app/receipts
+      - ./secrets:/app/secrets
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - money-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"  # Auto-Update aktiviert
+
+  telegram-bot:
+    image: ghcr.io/stefan-ffr/money-manager-backend:latest
+    container_name: money-telegram-bot
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-money}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-money}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
+      BACKEND_URL: http://backend:8000
+    volumes:
+      - ./receipts:/app/receipts
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    command: python telegram_bot.py
+    networks:
+      - money-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"  # Auto-Update aktiviert
+
+  frontend:
+    image: ghcr.io/stefan-ffr/money-manager-frontend:latest
+    container_name: money-frontend
+    restart: unless-stopped
+    ports:
+      - 3000:80
+    depends_on:
+      - backend
+    networks:
+      - money-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"  # Auto-Update aktiviert
+
+volumes:
+  postgres_data:
+
+networks:
+  money-network:
+    driver: bridge
