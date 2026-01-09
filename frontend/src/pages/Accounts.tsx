@@ -12,7 +12,8 @@ import {
   ArrowRightLeft,
   Eye,
   Upload,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
