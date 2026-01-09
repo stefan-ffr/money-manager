@@ -1,0 +1,6 @@
+# Environment variables mit Secrets
+.env
+
+# Runner working directory (wenn lokal gemountet)
+work/
+_work/

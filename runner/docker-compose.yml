@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  github-runner:
+    image: myoung34/github-runner:latest
+    container_name: github-runner-money-manager
+    restart: unless-stopped
+    environment:
+      # Setze diese Werte beim ersten Start
+      REPO_URL: https://github.com/stefan-ffr/money-manager
+      RUNNER_NAME: docker1-hel-runner
+      RUNNER_WORKDIR: /tmp/runner/work
+      RUNNER_GROUP: default
+      LABELS: linux,docker,arm64,self-hosted
+
+      # GitHub Token - MUSS gesetzt werden!
+      # Erstelle ein Personal Access Token: https://github.com/settings/tokens
+      # Benötigte Scopes: repo (full control)
+      ACCESS_TOKEN: ${GITHUB_TOKEN}
+
+    volumes:
+      # Docker socket mounten, damit der Runner Docker-Befehle ausführen kann
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistente Daten
+      - runner-data:/tmp/runner
+      # Optional: Docker buildx cache
+      - /tmp/buildx-cache:/tmp/buildx-cache
+
+    # Ressourcen-Limits (optional, anpassen nach Bedarf)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+volumes:
+  runner-data:
