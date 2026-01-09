@@ -29,6 +29,7 @@ class TransactionUpdate(BaseModel):
     category: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
+    requires_confirmation: Optional[bool] = None
 
 
 class TransactionResponse(BaseModel):
