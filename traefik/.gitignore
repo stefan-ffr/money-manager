@@ -1,0 +1,6 @@
+# Environment variables mit Secrets
+.env
+
+# Let's Encrypt Certificates
+letsencrypt/
+acme.json
