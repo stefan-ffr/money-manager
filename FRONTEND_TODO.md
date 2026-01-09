@@ -21,6 +21,7 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 - [x] Bank CSV Import UI (Upload, Bank-Auswahl, Auto-Match, Setup Modal, Ergebnis-Anzeige)
 - [x] Shared Accounts UI (Erstellen, Mitglieder, Split Transactions, Balance, Settlement)
 - [x] Receipt Upload (Beleg hochladen, anzeigen, herunterladen für Transaktionen)
+- [x] Konten-Seite MS Money 99 Style (Split-Layout: Tabelle oben, Formular unten)
 
 ## 🔴 Kritisch - Kern-Features fehlen
 
@@ -112,23 +113,24 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 **Priorität:** 🟢 NIEDRIG (für v1.0 optional)
 
 ### 8. Transaktion bearbeiten
-**Status:** ❌ Fehlt
+**Status:** ✅ FERTIG (2026-01-09 11:15)
 **Backend:** ✅ `PUT /api/v1/transactions/{id}`
 **Beschreibung:**
-- Edit-Button in Transaktionen-Liste
-- Formular vorausfüllen
-- Update-Funktion
+- ✅ Klick auf Transaktion lädt sie ins Formular
+- ✅ Formular wird vorausgefüllt
+- ✅ Update-Funktion in MS Money 99 Style Page
 
-**Priorität:** 🟢 NIEDRIG (erstmal nur Create + Delete)
+**Priorität:** ✅ IMPLEMENTIERT
 
 ### 9. Account Balance Tracking
-**Status:** ❌ Statisch
+**Status:** ✅ FERTIG (2026-01-09 11:15)
 **Backend:** ✅ Daten vorhanden
 **Beschreibung:**
-- Balance wird bei Transaktion automatisch aktualisiert
-- Balance History anzeigen
+- ✅ Running Balance wird in Transaktions-Tabelle berechnet
+- ✅ Balance wird bei jeder Transaktion aktualisiert
+- ✅ Saldo-Spalte in MS Money 99 Style Page
 
-**Priorität:** 🟢 NIEDRIG
+**Priorität:** ✅ IMPLEMENTIERT
 
 ### 10. Filter & Suche
 **Status:** ❌ Fehlt
@@ -173,18 +175,20 @@ Tracking für fehlende Frontend-Features. Backend ist vollständig implementiert
 ## 🆕 Neue Feature-Requests
 
 ### Konten-Seite: MS Money 99 Style
+**Status:** ✅ FERTIG (2026-01-09 11:15)
 **Beschreibung:**
-- Oberer Teil: Konten-Übersicht (wie aktuell)
-- Unteres Drittel: Transaktion-Details mit CRUD
-  - Felder zum Anlegen von Einträgen
-  - Löschen-Funktion
-  - Verschieben-Funktion
-  - Editieren-Funktion
-- Layout ähnlich MS Money 99
+- ✅ Header: Konto-Auswahl Dropdown + Edit/Neu Buttons
+- ✅ Oben (2/3): Transaktions-Tabelle mit Spalten (Datum, Beschreibung, Kategorie, Einnahme, Ausgabe, Saldo, Beleg)
+- ✅ Unten (1/3): Transaktions-Formular (Typ, Datum, Betrag, Beschreibung, Kategorie, Beleg)
+- ✅ Klick auf Transaktion lädt sie ins Formular
+- ✅ Buttons: Neu, Speichern, Verschieben, Löschen
+- ✅ Running Balance Berechnung
+- ✅ Receipt Upload/Preview integriert
+- ✅ Blue-Highlight für ausgewählte Transaktion
 
-**Status:** ⏳ Geplant
+**Priorität:** ✅ IMPLEMENTIERT
 
 ---
 
-**Letztes Update:** 2026-01-09 10:35 (nach Receipt Upload Implementierung)
-**Nächster Schritt:** Konten-Seite im MS Money 99 Stil oder Categories Management
+**Letztes Update:** 2026-01-09 11:20 (nach MS Money 99 Style Konten-Seite Implementierung)
+**Nächster Schritt:** Categories Management oder Dashboard Improvements
