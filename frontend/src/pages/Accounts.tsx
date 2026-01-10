@@ -110,18 +110,30 @@ function Accounts() {
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
       if (selectedTransaction) {
-        await axios.put(`${API_URL}/api/v1/transactions/${selectedTransaction.id}`, data)
+        const response = await axios.put(`${API_URL}/api/v1/transactions/${selectedTransaction.id}`, data)
+        return { transaction: response.data, isUpdate: true }
       } else {
-        await axios.post(`${API_URL}/api/v1/transactions/`, {
+        const response = await axios.post(`${API_URL}/api/v1/transactions/`, {
           ...data,
           account_id: selectedAccountId,
         })
+        return { transaction: response.data, isUpdate: false }
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      handleNewTransaction()
+      // Keep the transaction selected after creation so user can upload receipt
+      if (!data.isUpdate) {
+        setSelectedTransaction(data.transaction)
+        setFormData({
+          type: data.transaction.amount < 0 ? 'expense' : 'income',
+          date: data.transaction.date,
+          amount: Math.abs(data.transaction.amount).toString(),
+          description: data.transaction.description || '',
+          category: data.transaction.category || '',
+        })
+      }
     },
   })
 
