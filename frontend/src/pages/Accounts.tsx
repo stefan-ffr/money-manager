@@ -69,6 +69,7 @@ function Accounts() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [receiptPreview, setReceiptPreview] = useState<{ transactionId: number; path: string } | null>(null)
+  const [pendingReceipt, setPendingReceipt] = useState<File | null>(null)
 
   const [formData, setFormData] = useState({
     type: 'expense',
@@ -120,10 +121,24 @@ function Accounts() {
         return { transaction: response.data, isUpdate: false }
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      // Keep the transaction selected after creation so user can upload receipt
+
+      // If there's a pending receipt, upload it
+      if (!data.isUpdate && pendingReceipt) {
+        try {
+          await uploadReceiptMutation.mutateAsync({
+            transactionId: data.transaction.id,
+            file: pendingReceipt
+          })
+          setPendingReceipt(null)
+        } catch (error) {
+          console.error('Failed to upload receipt:', error)
+        }
+      }
+
+      // Keep the transaction selected after creation
       if (!data.isUpdate) {
         setSelectedTransaction(data.transaction)
         setFormData({
@@ -188,6 +203,7 @@ function Accounts() {
 
   const handleNewTransaction = () => {
     setSelectedTransaction(null)
+    setPendingReceipt(null)
     setFormData({
       type: 'expense',
       date: new Date().toISOString().split('T')[0],
@@ -195,6 +211,23 @@ function Accounts() {
       description: '',
       category: '',
     })
+  }
+
+  const handlePendingReceiptSelect = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,application/pdf'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        setPendingReceipt(file)
+      }
+    }
+    input.click()
+  }
+
+  const handleRemovePendingReceipt = () => {
+    setPendingReceipt(null)
   }
 
   const handleSaveTransaction = () => {
@@ -485,13 +518,13 @@ function Accounts() {
                 </select>
               </div>
 
-              {selectedTransaction && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Beleg
-                  </label>
-                  <div className="flex gap-2">
-                    {selectedTransaction.receipt_path ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Beleg
+                </label>
+                <div className="flex gap-2">
+                  {selectedTransaction ? (
+                    selectedTransaction.receipt_path ? (
                       <button
                         onClick={() => handleReceiptPreview(selectedTransaction.id)}
                         className="flex-1 text-sm text-blue-600 hover:text-blue-700 px-3 py-1.5 border border-blue-600 rounded-md flex items-center justify-center gap-1"
@@ -507,10 +540,35 @@ function Accounts() {
                         <Upload className="w-4 h-4" />
                         Hochladen
                       </button>
-                    )}
-                  </div>
+                    )
+                  ) : (
+                    <>
+                      {pendingReceipt ? (
+                        <div className="flex-1 flex items-center gap-2 px-3 py-1.5 border border-green-300 bg-green-50 rounded-md">
+                          <span className="text-xs text-green-700 truncate flex-1">
+                            {pendingReceipt.name}
+                          </span>
+                          <button
+                            onClick={handleRemovePendingReceipt}
+                            className="text-red-600 hover:text-red-700"
+                            title="Entfernen"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handlePendingReceiptSelect}
+                          className="flex-1 text-sm text-gray-700 hover:text-gray-900 px-3 py-1.5 border border-gray-300 rounded-md flex items-center justify-center gap-1"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Beleg auswählen
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
