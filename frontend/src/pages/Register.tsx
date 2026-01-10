@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registerWithPasskey } from '../services/auth'
+import { useAuth } from '../hooks/useAuth'
 import { KeyRound, AlertCircle, CheckCircle } from 'lucide-react'
 
 function Register() {
@@ -10,6 +11,7 @@ function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,6 +20,8 @@ function Register() {
 
     try {
       await registerWithPasskey(email, username, deviceName || undefined)
+      // Refresh user context after successful registration
+      await refreshUser()
       navigate('/')
     } catch (err: any) {
       setError(err.message || 'Registrierung fehlgeschlagen')

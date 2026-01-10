@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { handleOAuthCallback } from '../services/auth'
+import { useAuth } from '../hooks/useAuth'
 import { AlertCircle, Loader2 } from 'lucide-react'
 
 function OAuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const { refreshUser } = useAuth()
 
   useEffect(() => {
     const processCallback = async () => {
@@ -20,6 +22,8 @@ function OAuthCallback() {
 
       try {
         await handleOAuthCallback(code, state)
+        // Refresh user context after successful authentication
+        await refreshUser()
         // Successfully authenticated, redirect to dashboard
         navigate('/')
       } catch (err: any) {
@@ -28,7 +32,7 @@ function OAuthCallback() {
     }
 
     processCallback()
-  }, [searchParams, navigate])
+  }, [searchParams, navigate, refreshUser])
 
   if (error) {
     return (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { loginWithPasskey, loginWithOAuth, getOAuthConfig, type OAuthConfig } from '../services/auth'
+import { useAuth } from '../hooks/useAuth'
 import { KeyRound, AlertCircle, Shield } from 'lucide-react'
 
 function Login() {
@@ -9,6 +10,7 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null)
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
 
   useEffect(() => {
     // Load OAuth config on mount
@@ -22,6 +24,8 @@ function Login() {
 
     try {
       await loginWithPasskey(username)
+      // Refresh user context after successful login
+      await refreshUser()
       navigate('/')
     } catch (err: any) {
       setError(err.message || 'Login fehlgeschlagen')
