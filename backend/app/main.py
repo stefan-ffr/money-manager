@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation
+from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation, two_factor
 from app.core.database import engine, SessionLocal
 from app.models import base
 import os
@@ -39,6 +39,7 @@ app.add_middleware(
 
 # Include API Routers
 app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
+app.include_router(two_factor.router, prefix="/api/v1/2fa", tags=["two-factor-auth"])
 app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["accounts"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["categories"])

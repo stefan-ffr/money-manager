@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ENCRYPTION_KEY: str = ""  # Fernet key for TOTP secret encryption (generate with: Fernet.generate_key())
 
     # OAuth2/OIDC (Authentik, Keycloak, etc.)
     OAUTH_ENABLED: bool = False
