@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, LargeBinary, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, LargeBinary, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -16,8 +16,20 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # 2FA fields
+    totp_secret = Column(String(255), nullable=True)
+    totp_enabled = Column(Boolean, default=False)
+    backup_codes_hash = Column(Text, nullable=True)
+    require_2fa = Column(Boolean, default=False)
+    totp_last_used_at = Column(DateTime, nullable=True)
+
     # Relationships
     credentials = relationship("WebAuthnCredential", back_populates="user", cascade="all, delete-orphan")
+    accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
+    categories = relationship("Category", back_populates="user", cascade="all, delete-orphan")
+    backup_codes = relationship("BackupCode", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", foreign_keys="AuditLog.user_id")
 
 
 class WebAuthnCredential(Base):

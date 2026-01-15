@@ -8,6 +8,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     date = Column(Date, nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
@@ -22,4 +23,5 @@ class Transaction(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
+    user = relationship("User", back_populates="transactions")
     account = relationship("Account", back_populates="transactions")
