@@ -531,6 +531,35 @@ function TelegramSettings() {
 
 // Category Settings Component
 function CategorySettings() {
+  const currentYear = new Date().getFullYear()
+  const [periodStart, setPeriodStart] = useState(`${currentYear}-01-01`)
+  const [periodEnd, setPeriodEnd] = useState(`${currentYear}-12-31`)
+  const [exporting, setExporting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleExport = async () => {
+    setError('')
+    setExporting(true)
+    try {
+      const res = await axios.get(`${API_URL}/api/v1/settings/categories/easytax-export`, {
+        params: { period_start: periodStart || undefined, period_end: periodEnd || undefined },
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `easytax_export_${periodStart || 'alle'}_${periodEnd || 'alle'}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setError('Export fehlgeschlagen. Bitte erneut versuchen.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -542,13 +571,38 @@ function CategorySettings() {
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-medium text-blue-900 mb-2">📊 EasyTax Export</h3>
-        <p className="text-sm text-blue-700 mb-2">
-          Mappe deine Kategorien zu EasyTax-Codes für automatischen Steuer-Export
+        <p className="text-sm text-blue-700 mb-3">
+          Exportiere deine Transaktionen gruppiert nach EasyTax-Code als CSV für die Steuererklärung.
         </p>
-        <button className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-          <Download className="inline w-4 h-4 mr-1" />
-          CSV Exportieren
-        </button>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-blue-900 mb-1">Von</label>
+            <input
+              type="date"
+              value={periodStart}
+              onChange={(e) => setPeriodStart(e.target.value)}
+              className="rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-blue-900 mb-1">Bis</label>
+            <input
+              type="date"
+              value={periodEnd}
+              onChange={(e) => setPeriodEnd(e.target.value)}
+              className="rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="text-sm bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Download className="inline w-4 h-4 mr-1" />
+            {exporting ? 'Exportiere…' : 'CSV Exportieren'}
+          </button>
+        </div>
+        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg">

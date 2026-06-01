@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.config import settings
@@ -192,8 +193,70 @@ async def create_category_mapping(mapping: CategoryMapping, db: Session = Depend
     
     db.commit()
     db.refresh(category)
-    
+
     return {"message": "Category mapping created", "category": category}
+
+
+@router.get("/categories/easytax-export")
+async def export_easytax_csv(
+    period_start: str | None = None,
+    period_end: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export the user's transactions grouped by EasyTax code as a CSV.
+
+    Optional ISO dates (YYYY-MM-DD) limit the period. The file can be imported
+    into the Swiss EasyTax software.
+    """
+    import csv
+    import io
+    from datetime import date as date_cls
+    from fastapi.responses import Response
+    from app.models.transaction import Transaction
+
+    # Map category name -> EasyTax code (system categories + the user's own)
+    categories = db.query(Category).filter(
+        (Category.user_id == None) | (Category.user_id == current_user.id)  # noqa: E711
+    ).all()
+    code_by_name = {c.name: (c.easytax_code or "") for c in categories}
+
+    # Collect the user's transactions in the requested period
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    if period_start:
+        try:
+            query = query.filter(Transaction.date >= date_cls.fromisoformat(period_start))
+        except ValueError:
+            raise HTTPException(400, "period_start must be YYYY-MM-DD")
+    if period_end:
+        try:
+            query = query.filter(Transaction.date <= date_cls.fromisoformat(period_end))
+        except ValueError:
+            raise HTTPException(400, "period_end must be YYYY-MM-DD")
+
+    # Aggregate amount and count per (EasyTax code, category)
+    groups: Dict[tuple, dict] = {}
+    for tx in query.all():
+        cat_name = tx.category or "Ohne Kategorie"
+        code = code_by_name.get(cat_name, "")
+        key = (code, cat_name)
+        bucket = groups.setdefault(key, {"amount": Decimal("0.00"), "count": 0})
+        bucket["amount"] += tx.amount
+        bucket["count"] += 1
+
+    # Build the CSV (semicolon-separated, EasyTax/Swiss convention)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";")
+    writer.writerow(["EasyTax-Code", "Kategorie", "Anzahl", "Betrag"])
+    for (code, cat_name), data in sorted(groups.items(), key=lambda kv: (kv[0][0] or "zzz", kv[0][1])):
+        writer.writerow([code, cat_name, data["count"], f"{data['amount']:.2f}"])
+
+    filename = f"easytax_export_{period_start or 'alle'}_{period_end or 'alle'}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.put("/security")
