@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -25,6 +25,7 @@ from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import create_access_token, get_current_user
+from app.core.audit import record_audit
 from app.models.user import User, WebAuthnCredential
 
 router = APIRouter()
@@ -125,6 +126,7 @@ async def begin_registration(
 @router.post("/auth/register/complete")
 async def complete_registration(
     request: RegistrationCompleteRequest,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -173,6 +175,11 @@ async def complete_registration(
 
         # Generate access token
         access_token = create_access_token({"sub": str(user.id)})
+
+        record_audit(
+            db, "user.register", user_id=user.id,
+            details={"device_name": request.device_name}, request=http_request,
+        )
 
         return {
             "message": "Registration successful",
@@ -245,6 +252,7 @@ async def begin_authentication(
 @router.post("/auth/login/complete", response_model=TokenResponse)
 async def complete_authentication(
     request: AuthenticationCompleteRequest,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -322,6 +330,8 @@ async def complete_authentication(
 
         # Generate access token
         access_token = create_access_token({"sub": str(user.id)})
+
+        record_audit(db, "user.login", user_id=user.id, request=http_request)
 
         return {
             "access_token": access_token,

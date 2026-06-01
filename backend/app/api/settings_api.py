@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from datetime import datetime
@@ -8,7 +8,9 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import get_current_user
 from app.core.authorization import get_current_admin_user
+from app.core.audit import record_audit
 from app.models.category import Category
+from app.models.audit_log import AuditLog
 from app.models.user import User
 
 router = APIRouter()
@@ -260,9 +262,10 @@ async def export_easytax_csv(
 
 
 @router.put("/security")
-async def update_security_settings(settings: SecuritySettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
+async def update_security_settings(settings: SecuritySettings, http_request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update security settings"""
     # TODO: Store in database
+    record_audit(db, "settings.security_updated", user_id=current_user.id, request=http_request)
     return {"message": "Security settings updated"}
 
 
@@ -295,13 +298,19 @@ async def test_federation_connection(instance_url: str, current_user: User = Dep
 
 
 @router.post("/generate-federation-keys")
-async def generate_federation_keys(current_user: User = Depends(get_current_admin_user)):
+async def generate_federation_keys(
+    http_request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
     """Generate new RSA key pair for federation (admin only)."""
     from app.federation.crypto import generate_key_pair, get_public_key_pem
-    
+
     generate_key_pair()
     public_key = get_public_key_pem()
-    
+
+    record_audit(db, "federation.keys_regenerated", user_id=current_user.id, request=http_request)
+
     return {
         "message": "New key pair generated",
         "public_key": public_key
@@ -341,8 +350,35 @@ async def export_all_data(
 async def get_currencies():
     """Get list of all supported currencies"""
     from app.core.currencies import get_all_currencies
-    
+
     return {
         "currencies": get_all_currencies(),
         "default": "CHF"
     }
+
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return audit-log entries. Admins see all; users see only their own."""
+    limit = max(1, min(limit, 500))
+    query = db.query(AuditLog)
+    if not current_user.is_superuser:
+        query = query.filter(AuditLog.user_id == current_user.id)
+
+    entries = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": e.id,
+            "user_id": e.user_id,
+            "action": e.action,
+            "target_user_id": e.target_user_id,
+            "details": e.details,
+            "ip_address": e.ip_address,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in entries
+    ]
