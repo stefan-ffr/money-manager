@@ -69,6 +69,10 @@ class TransactionResponse(BaseModel):
 def list_transactions(
     account_id: Optional[int] = None,
     status: Optional[str] = None,
+    category: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    q: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     user_filter = Depends(get_user_filter),
@@ -82,6 +86,14 @@ def list_transactions(
         query = query.filter(Transaction.account_id == account_id)
     if status:
         query = query.filter(Transaction.status == status)
+    if category:
+        query = query.filter(Transaction.category == category)
+    if date_from:
+        query = query.filter(Transaction.date >= date_from)
+    if date_to:
+        query = query.filter(Transaction.date <= date_to)
+    if q:
+        query = query.filter(Transaction.description.ilike(f"%{q}%"))
 
     transactions = query.order_by(Transaction.date.desc()).offset(skip).limit(limit).all()
     return transactions

@@ -621,7 +621,29 @@ function CategorySettings() {
 }
 
 // Security Settings Component
+interface AuditLogEntry {
+  id: number
+  action: string
+  ip_address: string | null
+  created_at: string | null
+}
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'user.login': '🔑 Anmeldung',
+  'user.register': '🆕 Registrierung',
+  'federation.keys_regenerated': '🔐 Föderations-Schlüssel neu erzeugt',
+  'settings.security_updated': '⚙️ Sicherheitseinstellungen geändert',
+}
+
 function SecuritySettings() {
+  const { data: auditLogs } = useQuery({
+    queryKey: ['audit-logs'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/settings/audit-logs?limit=50`)
+      return res.data as AuditLogEntry[]
+    },
+  })
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Sicherheitseinstellungen</h2>
@@ -677,6 +699,38 @@ function SecuritySettings() {
           <li>Regelmäßige Database Backups</li>
           <li>Rate Limiting für API aktivieren</li>
         </ul>
+      </div>
+
+      <div>
+        <h3 className="font-medium mb-2">📋 Audit-Log (letzte Ereignisse)</h3>
+        {!auditLogs || auditLogs.length === 0 ? (
+          <p className="text-sm text-gray-500">Noch keine Ereignisse aufgezeichnet.</p>
+        ) : (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Zeitpunkt</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Aktion</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">IP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {auditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-4 py-2 text-gray-600 whitespace-nowrap">
+                      {log.created_at ? new Date(log.created_at).toLocaleString('de-CH') : '–'}
+                    </td>
+                    <td className="px-4 py-2 text-gray-900">
+                      {AUDIT_ACTION_LABELS[log.action] || log.action}
+                    </td>
+                    <td className="px-4 py-2 text-gray-500">{log.ip_address || '–'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
