@@ -24,6 +24,13 @@ interface SharedAccount {
   currency: string
 }
 
+interface Member {
+  id: number
+  user_identifier: string
+  instance_url: string | null
+  role: string
+}
+
 interface Balance {
   user: string
   amount: number
@@ -276,6 +283,15 @@ function SharedAccountDetails({ accountId, onClose }: SharedAccountDetailsProps)
     },
   })
 
+  const { data: members } = useQuery({
+    queryKey: ['shared-account-members', accountId],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/shared-accounts/${accountId}/members`)
+      return res.data as Member[]
+    },
+    enabled: activeTab === 'members',
+  })
+
   const { data: balance } = useQuery({
     queryKey: ['shared-account-balance', accountId],
     queryFn: async () => {
@@ -362,11 +378,29 @@ function SharedAccountDetails({ accountId, onClose }: SharedAccountDetailsProps)
                   Hinzufügen
                 </button>
               </div>
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <p className="text-gray-600">
-                  Noch keine Mitglieder. Klicken Sie auf "Hinzufügen" um Mitglieder einzuladen.
-                </p>
-              </div>
+              {members && members.length > 0 ? (
+                <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                  {members.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="font-medium text-gray-900">{m.user_identifier}</p>
+                        {m.instance_url && (
+                          <p className="text-xs text-gray-500">{m.instance_url}</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">
+                        {m.role}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <p className="text-gray-600">
+                    Noch keine Mitglieder. Klicken Sie auf "Hinzufügen" um Mitglieder einzuladen.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -462,6 +496,7 @@ function SharedAccountDetails({ accountId, onClose }: SharedAccountDetailsProps)
             onSuccess={() => {
               setShowAddMemberModal(false)
               queryClient.invalidateQueries({ queryKey: ['shared-account', accountId] })
+              queryClient.invalidateQueries({ queryKey: ['shared-account-members', accountId] })
             }}
           />
         )}
