@@ -4,6 +4,9 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.security import get_current_user
+from app.core.authorization import verify_account_access
+from app.models.user import User
 from app.services.bank_import_service import BankImportService, setup_bank_account
 
 router = APIRouter()
@@ -30,7 +33,8 @@ class ImportResult(BaseModel):
 @router.post("/bank/setup")
 async def setup_account_for_bank_import(
     setup: BankAccountSetup,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Konfiguriere Account für automatischen Bank Import
@@ -46,6 +50,9 @@ async def setup_account_for_bank_import(
             "enable_auto_import": true
         }
     """
+    # Verify the current user owns this account
+    verify_account_access(setup.account_id, db, current_user)
+
     try:
         account = setup_bank_account(
             db=db,
@@ -74,7 +81,8 @@ async def import_bank_csv(
     file: UploadFile = File(...),
     account_id: Optional[int] = None,
     auto_match: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Importiere Bank CSV mit automatischem Account Matching
@@ -102,21 +110,33 @@ async def import_bank_csv(
     Returns:
         ImportResult mit Details zum Import
     """
-    # Read CSV content
+    # If a specific account is given, verify the current user owns it
+    if account_id is not None:
+        verify_account_access(account_id, db, current_user)
+
+    # Read CSV content (tolerate non-UTF-8 bank exports)
     content = await file.read()
-    csv_content = content.decode('utf-8')
-    
-    # Import service
+    try:
+        csv_content = content.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        csv_content = content.decode('latin-1')
+
+    # Import service – scoped to the current user's accounts
     service = BankImportService(db)
-    result = service.import_csv(
-        csv_content=csv_content,
-        account_id=account_id,
-        auto_match=auto_match
-    )
-    
+    try:
+        result = service.import_csv(
+            csv_content=csv_content,
+            account_id=account_id,
+            auto_match=auto_match,
+            user_id=current_user.id
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail={"success": False, "error": f"Import fehlgeschlagen: {e}"})
+
     if not result['success']:
         raise HTTPException(400, detail=result)
-    
+
     return ImportResult(**result)
 
 
@@ -172,16 +192,17 @@ async def get_supported_banks():
 
 
 @router.get("/bank/account/{account_id}/info")
-async def get_bank_account_info(account_id: int, db: Session = Depends(get_db)):
+async def get_bank_account_info(
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Hole Bank Import Info für Account
     """
-    from app.models.account import Account
-    
-    account = db.query(Account).filter(Account.id == account_id).first()
-    if not account:
-        raise HTTPException(404, "Account not found")
-    
+    # Verify ownership and load the account
+    account = verify_account_access(account_id, db, current_user)
+
     return {
         "account_id": account.id,
         "account_name": account.name,

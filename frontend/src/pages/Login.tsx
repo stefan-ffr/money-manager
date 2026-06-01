@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { loginWithPasskey, loginWithOAuth, getOAuthConfig, type OAuthConfig } from '../services/auth'
+import { loginWithPasskey, loginWithOAuth, getOAuthConfig, isPasskeySupported, type OAuthConfig } from '../services/auth'
 import { useAuth } from '../hooks/useAuth'
 import { KeyRound, AlertCircle, Shield } from 'lucide-react'
 
@@ -9,6 +9,7 @@ function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null)
+  const passkeySupported = isPasskeySupported()
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
 
@@ -58,6 +59,19 @@ function Login() {
           </p>
         </div>
 
+        {!passkeySupported && (
+          <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+              <div className="ml-3 text-sm text-yellow-800">
+                Dein Browser oder die Verbindung unterstützt keine Passkeys.
+                Passkeys benötigen HTTPS und einen aktuellen Browser. Nutze die
+                SSO-Anmeldung unten oder öffne die App über eine sichere (HTTPS-)Adresse.
+              </div>
+            </div>
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="rounded-md bg-red-50 p-4">
@@ -94,7 +108,7 @@ function Login() {
           <div>
             <button
               type="submit"
-              disabled={loading || !username}
+              disabled={loading || !username || !passkeySupported}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
