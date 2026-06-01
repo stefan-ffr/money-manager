@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     FEDERATION_ENABLED: bool = False
     INSTANCE_PRIVATE_KEY_PATH: str = "/app/secrets/instance_key.pem"
 
+    # WebAuthn / Passkeys
+    # RP-ID must be the (registrable) domain the user accesses the frontend on.
+    # Origin(s) must match the frontend URL(s) exactly, incl. scheme/port.
+    # Both fall back to INSTANCE_DOMAIN for backwards compatibility when unset.
+    # WEBAUTHN_ORIGIN may be a comma-separated list to allow several origins.
+    WEBAUTHN_RP_ID: str = ""
+    WEBAUTHN_ORIGIN: str = ""
+
     # Mirror Instances / Replication
     REPLICATION_ENABLED: bool = False
     REPLICATION_SYNC_INTERVAL_MINUTES: int = 5  # Sync every 5 minutes
@@ -45,6 +53,19 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+
+    @property
+    def webauthn_rp_id(self) -> str:
+        """Effective WebAuthn RP-ID (falls back to INSTANCE_DOMAIN)."""
+        return self.WEBAUTHN_RP_ID or self.INSTANCE_DOMAIN
+
+    @property
+    def webauthn_origin(self):
+        """Effective expected origin(s); list if several are configured."""
+        if self.WEBAUTHN_ORIGIN:
+            origins = [o.strip() for o in self.WEBAUTHN_ORIGIN.split(",") if o.strip()]
+            return origins if len(origins) > 1 else origins[0]
+        return f"https://{self.INSTANCE_DOMAIN}"
 
     def get_allowed_telegram_users(self) -> List[int]:
         if not self.TELEGRAM_ALLOWED_USERS:

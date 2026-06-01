@@ -96,7 +96,7 @@ async def begin_registration(
 
     # Generate registration options
     options = generate_registration_options(
-        rp_id=settings.INSTANCE_DOMAIN,
+        rp_id=settings.webauthn_rp_id,
         rp_name="Money Manager",
         user_id=str(user.id).encode(),
         user_name=request.username,
@@ -153,8 +153,8 @@ async def complete_registration(
         verification = verify_registration_response(
             credential=request.credential,
             expected_challenge=challenge,
-            expected_rp_id=settings.INSTANCE_DOMAIN,
-            expected_origin=f"https://{settings.INSTANCE_DOMAIN}",
+            expected_rp_id=settings.webauthn_rp_id,
+            expected_origin=settings.webauthn_origin,
         )
 
         # Store credential
@@ -225,7 +225,7 @@ async def begin_authentication(
 
     # Generate authentication options
     options = generate_authentication_options(
-        rp_id=settings.INSTANCE_DOMAIN,
+        rp_id=settings.webauthn_rp_id,
         allow_credentials=[
             PublicKeyCredentialDescriptor(id=cred.credential_id)
             for cred in credentials
@@ -306,8 +306,8 @@ async def complete_authentication(
         verification = verify_authentication_response(
             credential=request.credential,
             expected_challenge=challenge,
-            expected_rp_id=settings.INSTANCE_DOMAIN,
-            expected_origin=f"https://{settings.INSTANCE_DOMAIN}",
+            expected_rp_id=settings.webauthn_rp_id,
+            expected_origin=settings.webauthn_origin,
             credential_public_key=cred.public_key,
             credential_current_sign_count=cred.sign_count,
         )

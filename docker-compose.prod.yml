@@ -34,6 +34,9 @@ services:
       TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
       INSTANCE_DOMAIN: ${INSTANCE_DOMAIN:-localhost}
       FEDERATION_ENABLED: ${FEDERATION_ENABLED:-false}
+      # Passkeys/WebAuthn must match the frontend domain (default to the public DOMAIN)
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-${DOMAIN}}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-https://${DOMAIN}}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://${DOMAIN}}
       RECEIPTS_PATH: ${RECEIPTS_PATH:-/app/receipts}
     volumes:
