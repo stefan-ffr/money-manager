@@ -13,6 +13,7 @@ import {
   Percent,
   Equal
 } from 'lucide-react'
+import { CURRENCY_LIST } from '../lib/currencies'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -225,9 +226,11 @@ function CreateSharedAccountModal({ onClose, onSuccess }: CreateSharedAccountMod
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
               required
             >
-              <option value="CHF">CHF</option>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
+              {CURRENCY_LIST.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} – {c.name}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { AlertCircle, CheckCircle, Clock, PlusCircle, X, Upload, FileText, Eye } from 'lucide-react'
+import { formatCurrency } from '../lib/currencies'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -204,7 +205,7 @@ function TransactionList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <span className={tx.amount < 0 ? 'text-red-600' : 'text-green-600'}>
-                      CHF {Math.abs(tx.amount).toFixed(2)}
+                      {formatCurrency(Math.abs(tx.amount), accounts?.find((a) => a.id === tx.account_id)?.currency || 'CHF')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
