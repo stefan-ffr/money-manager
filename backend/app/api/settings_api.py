@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Dict
+from datetime import datetime
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.security import get_current_user
+from app.core.authorization import get_current_admin_user
 from app.models.category import Category
+from app.models.user import User
 
 router = APIRouter()
 
@@ -56,7 +60,7 @@ class SecuritySettings(BaseModel):
 
 # GET Endpoints
 @router.get("/preferences")
-async def get_preferences(db: Session = Depends(get_db)):
+async def get_preferences(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get user preferences"""
     # TODO: Store in database per user
     return {
@@ -70,7 +74,7 @@ async def get_preferences(db: Session = Depends(get_db)):
 
 
 @router.get("/federation")
-async def get_federation_settings(db: Session = Depends(get_db)):
+async def get_federation_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get federation settings"""
     return {
         "enabled": settings.FEDERATION_ENABLED,
@@ -81,14 +85,14 @@ async def get_federation_settings(db: Session = Depends(get_db)):
 
 
 @router.get("/mirrors")
-async def get_mirror_instances(db: Session = Depends(get_db)):
+async def get_mirror_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get configured mirror instances"""
     # TODO: Load from database
     return []
 
 
 @router.get("/telegram")
-async def get_telegram_settings(db: Session = Depends(get_db)):
+async def get_telegram_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Get Telegram bot settings"""
     return {
         "bot_token": settings.TELEGRAM_BOT_TOKEN if settings.TELEGRAM_BOT_TOKEN else None,
@@ -99,7 +103,7 @@ async def get_telegram_settings(db: Session = Depends(get_db)):
 
 
 @router.get("/categories/mappings")
-async def get_category_mappings(db: Session = Depends(get_db)):
+async def get_category_mappings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get EasyTax category mappings"""
     categories = db.query(Category).all()
     return [
@@ -114,7 +118,7 @@ async def get_category_mappings(db: Session = Depends(get_db)):
 
 
 @router.get("/security")
-async def get_security_settings(db: Session = Depends(get_db)):
+async def get_security_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get security settings"""
     return {
         "passkey_enabled": False,
@@ -126,21 +130,21 @@ async def get_security_settings(db: Session = Depends(get_db)):
 
 # POST/PUT Endpoints
 @router.put("/preferences")
-async def update_preferences(prefs: UserPreferences, db: Session = Depends(get_db)):
+async def update_preferences(prefs: UserPreferences, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update user preferences"""
     # TODO: Store in database per user
     return {"message": "Preferences updated", "preferences": prefs.model_dump()}
 
 
 @router.put("/federation")
-async def update_federation_settings(settings: FederationSettings, db: Session = Depends(get_db)):
+async def update_federation_settings(settings: FederationSettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update federation settings"""
     # TODO: Update in config/database
     return {"message": "Federation settings updated"}
 
 
 @router.post("/mirrors")
-async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depends(get_db)):
+async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Add new mirror instance"""
     from app.models.shared_account import MirrorInstance
     
@@ -159,21 +163,21 @@ async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depend
 
 
 @router.delete("/mirrors/{mirror_id}")
-async def remove_mirror_instance(mirror_id: int, db: Session = Depends(get_db)):
+async def remove_mirror_instance(mirror_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Remove mirror instance"""
     # TODO: Delete from database
     return {"message": "Mirror instance removed"}
 
 
 @router.put("/telegram")
-async def update_telegram_settings(settings: TelegramSettings, db: Session = Depends(get_db)):
+async def update_telegram_settings(settings: TelegramSettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update Telegram settings"""
     # TODO: Update environment or config
     return {"message": "Telegram settings updated"}
 
 
 @router.post("/categories/mappings")
-async def create_category_mapping(mapping: CategoryMapping, db: Session = Depends(get_db)):
+async def create_category_mapping(mapping: CategoryMapping, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create or update category mapping"""
     category = db.query(Category).filter(Category.name == mapping.category_name).first()
     
@@ -193,7 +197,7 @@ async def create_category_mapping(mapping: CategoryMapping, db: Session = Depend
 
 
 @router.put("/security")
-async def update_security_settings(settings: SecuritySettings, db: Session = Depends(get_db)):
+async def update_security_settings(settings: SecuritySettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update security settings"""
     # TODO: Store in database
     return {"message": "Security settings updated"}
@@ -201,7 +205,7 @@ async def update_security_settings(settings: SecuritySettings, db: Session = Dep
 
 # Utility Endpoints
 @router.post("/test-federation")
-async def test_federation_connection(instance_url: str):
+async def test_federation_connection(instance_url: str, current_user: User = Depends(get_current_admin_user)):
     """Test connection to another instance"""
     import httpx
     
@@ -228,8 +232,8 @@ async def test_federation_connection(instance_url: str):
 
 
 @router.post("/generate-federation-keys")
-async def generate_federation_keys():
-    """Generate new RSA key pair for federation"""
+async def generate_federation_keys(current_user: User = Depends(get_current_admin_user)):
+    """Generate new RSA key pair for federation (admin only)."""
     from app.federation.crypto import generate_key_pair, get_public_key_pem
     
     generate_key_pair()
@@ -242,18 +246,31 @@ async def generate_federation_keys():
 
 
 @router.get("/export-data")
-async def export_all_data(db: Session = Depends(get_db)):
-    """Export all user data as JSON"""
+async def export_all_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export the current user's own accounts and transactions as JSON."""
     from app.models.account import Account
     from app.models.transaction import Transaction
-    
-    accounts = db.query(Account).all()
-    transactions = db.query(Transaction).all()
-    
+
+    # Admins may export everything; regular users only their own data
+    acc_query = db.query(Account)
+    tx_query = db.query(Transaction)
+    if not current_user.is_superuser:
+        acc_query = acc_query.filter(Account.user_id == current_user.id)
+        tx_query = tx_query.filter(Transaction.user_id == current_user.id)
+
+    def serialize(obj):
+        return {
+            c.name: getattr(obj, c.name)
+            for c in obj.__table__.columns
+        }
+
     return {
-        "accounts": [acc.__dict__ for acc in accounts],
-        "transactions": [tx.__dict__ for tx in transactions],
-        "exported_at": "2024-12-07T12:00:00Z"
+        "accounts": [serialize(acc) for acc in acc_query.all()],
+        "transactions": [serialize(tx) for tx in tx_query.all()],
+        "exported_at": datetime.utcnow().isoformat() + "Z",
     }
 
 
