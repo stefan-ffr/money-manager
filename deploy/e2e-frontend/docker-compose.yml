@@ -1,0 +1,38 @@
+name: mm-e2e-frontend
+
+# Single full instance for the Playwright frontend e2e. The frontend serves the
+# SPA and proxies /api + /.well-known to the backend on the SAME origin, so
+# WebAuthn works against the localhost secure context (port 8080).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: money
+      POSTGRES_USER: money
+      POSTGRES_PASSWORD: money
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U money"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    image: money-backend:ci
+    environment:
+      DATABASE_URL: postgresql://money:money@db:5432/money
+      SECRET_KEY: e2e-frontend-secret
+      INSTANCE_DOMAIN: localhost
+      WEBAUTHN_RP_ID: localhost
+      WEBAUTHN_ORIGIN: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: money-frontend:ci
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
