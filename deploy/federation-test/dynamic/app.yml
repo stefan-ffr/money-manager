@@ -1,0 +1,18 @@
+# Traefik file-provider dynamic config.
+# Change the Host rule to THIS instance's domain (e.g. money-b.juroct.ch on B).
+# The service points at the frontend container by name over `traefik-public`;
+# the frontend nginx serves the SPA and proxies /api and /.well-known to backend.
+http:
+  routers:
+    app:
+      rule: "Host(`money-a.juroct.ch`)"
+      entryPoints:
+        - websecure
+      service: app
+      tls:
+        certResolver: letsencrypt
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://money-frontend:80"

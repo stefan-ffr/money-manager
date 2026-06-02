@@ -59,7 +59,9 @@ class InvoiceAttachment(BaseModel):
 
 
 class FederatedInvoice(BaseModel):
-    from_user: str  # e.g., stefan@money.babsyit.ch
+    # Optional on send (the server sets it from the authenticated user);
+    # always present in a received, signed invoice.
+    from_user: str = ""  # e.g., stefan@money.babsyit.ch
     to_user: str
     amount: Decimal
     currency: str = "CHF"

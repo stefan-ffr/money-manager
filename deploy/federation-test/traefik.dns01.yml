@@ -1,63 +1,47 @@
 version: '3.8'
 
-# Traefik with Let's Encrypt DNS-01 challenge — works for internal hosts that
-# are NOT publicly reachable on ports 80/443. One Traefik per LXC/instance.
+# Traefik with Let's Encrypt DNS-01 (works for internal hosts not reachable on
+# 80/443). One Traefik per LXC/instance.
 #
-# Set DNS_PROVIDER and the matching credential env vars in .env (see .env.example).
-# Cloudflare is shown as the default; for other providers change DNS_PROVIDER and
-# the credential variable names per https://doc.traefik.io/traefik/https/acme/#providers
+# NOTE: We use Traefik's FILE provider (not the Docker provider) on purpose:
+# Docker Engine 29+ removed API versions < 1.40, and Traefik's Docker-provider
+# client fails to negotiate against it ("client version 1.24 is too old").
+# The file provider avoids the Docker socket entirely and routes by container
+# name over the shared `traefik-public` network.
+#
+# Set DOMAIN, ACME_EMAIL and the Cloudflare token in .env (see .env.example),
+# and put your domain into dynamic/app.yml (the router Host rule).
 
 services:
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.5
     container_name: traefik
     restart: unless-stopped
     command:
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik-public"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      # Let's Encrypt via DNS-01
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=${DNS_PROVIDER:-cloudflare}"
-      # Use public resolvers to check propagation (helps on internal DNS setups)
       - "--certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--log.level=${LOG_LEVEL:-INFO}"
-      - "--accesslog=true"
+    environment:
+      - TZ=Europe/Zurich
+      # Cloudflare DNS-01 token (scope Zone:DNS:Edit + Zone:Zone:Read)
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
+      - ./dynamic:/etc/traefik/dynamic:ro
     networks:
       - traefik-public
-    environment:
-      - TZ=Europe/Zurich
-      # --- DNS provider credentials (Cloudflare example) ---
-      # Create a scoped token with Zone:DNS:Edit for the zone.
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
-      # --- Other providers: uncomment/add the vars your provider needs, e.g. ---
-      # - DESEC_TOKEN=${DESEC_TOKEN:-}
-      # - HETZNER_API_KEY=${HETZNER_API_KEY:-}
-    labels:
-      - "com.centurylinklabs.watchtower.enable=false"
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.traefik.tls.domains[0].main=${DOMAIN}"
-      - "traefik.http.routers.traefik.tls.domains[0].sans=*.${DOMAIN}"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.middlewares=traefik-auth"
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}"
 
 networks:
   traefik-public:

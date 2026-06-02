@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     REPLICATION_SYNC_INTERVAL_MINUTES: int = 5  # Sync every 5 minutes
     REPLICATION_CONFLICT_STRATEGY: str = "last_write_wins"  # last_write_wins, primary_wins, manual
 
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    # CORS – accepts a comma-separated string or a JSON array via env.
+    CORS_ORIGINS: str = "http://localhost:3000"
 
     # File Storage
     RECEIPTS_PATH: str = "/app/receipts"
@@ -66,6 +66,20 @@ class Settings(BaseSettings):
             origins = [o.strip() for o in self.WEBAUTHN_ORIGIN.split(",") if o.strip()]
             return origins if len(origins) > 1 else origins[0]
         return f"https://{self.INSTANCE_DOMAIN}"
+
+    @property
+    def cors_origins(self) -> List[str]:
+        """Parse CORS_ORIGINS from a comma-separated string or JSON array."""
+        raw = (self.CORS_ORIGINS or "").strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            import json
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
     def get_allowed_telegram_users(self) -> List[int]:
         if not self.TELEGRAM_ALLOWED_USERS:
