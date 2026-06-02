@@ -66,12 +66,20 @@ CORS_ORIGINS=https://money-a.juroct.ch
 ## 3. Starten (pro LXC)
 
 ```bash
-# Traefik (DNS-01)
+# App-Stack (db, backend, frontend – telegram-bot weglassen, falls kein Token)
+docker compose -f docker-compose.prod.yml pull db backend frontend
+docker compose -f docker-compose.prod.yml up -d db backend frontend
+
+# Traefik-Routing-Ziel auf diese Domain setzen
+sed -i "s/money-a.juroct.ch/$DOMAIN/" deploy/federation-test/dynamic/app.yml   # $DOMAIN dieser Instanz
+# Traefik (DNS-01, file-provider)
 docker compose -f deploy/federation-test/traefik.dns01.yml --env-file deploy/federation-test/.env up -d
-# App-Stack
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d  # für :latest
 ```
+
+> **Docker 29:** Traefik nutzt hier bewusst den **file-provider** (kein Docker-Socket).
+> Docker Engine 29+ hat alte API-Versionen entfernt; Traefiks Docker-Provider scheitert
+> daran („client version 1.24 is too old"). Der file-provider routet stabil per
+> Container-Name (`money-frontend`) über das `traefik-public`-Netz.
 
 Prüfen (von irgendwo):
 ```bash
