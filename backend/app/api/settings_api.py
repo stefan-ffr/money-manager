@@ -12,6 +12,7 @@ from app.core.audit import record_audit
 from app.models.category import Category
 from app.models.audit_log import AuditLog
 from app.models.user import User
+from app.models.user_preference import UserPreference
 
 router = APIRouter()
 
@@ -62,17 +63,27 @@ class SecuritySettings(BaseModel):
 
 
 # GET Endpoints
+def _get_or_create_preferences(db: Session, user: User) -> UserPreference:
+    prefs = db.query(UserPreference).filter(UserPreference.user_id == user.id).first()
+    if not prefs:
+        prefs = UserPreference(user_id=user.id)
+        db.add(prefs)
+        db.commit()
+        db.refresh(prefs)
+    return prefs
+
+
 @router.get("/preferences")
 async def get_preferences(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Get user preferences"""
-    # TODO: Store in database per user
+    """Get the current user's stored preferences."""
+    prefs = _get_or_create_preferences(db, current_user)
     return {
-        "default_account_id": None,
-        "default_currency": "CHF",
-        "date_format": "DD.MM.YYYY",
-        "language": "de",
-        "theme": "light",
-        "email_notifications": True
+        "default_account_id": prefs.default_account_id,
+        "default_currency": prefs.default_currency,
+        "date_format": prefs.date_format,
+        "language": prefs.language,
+        "theme": prefs.theme,
+        "email_notifications": prefs.email_notifications,
     }
 
 
@@ -134,8 +145,12 @@ async def get_security_settings(db: Session = Depends(get_db), current_user: Use
 # POST/PUT Endpoints
 @router.put("/preferences")
 async def update_preferences(prefs: UserPreferences, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Update user preferences"""
-    # TODO: Store in database per user
+    """Persist the current user's preferences."""
+    db_prefs = _get_or_create_preferences(db, current_user)
+    for key, value in prefs.model_dump().items():
+        setattr(db_prefs, key, value)
+    db.commit()
+    db.refresh(db_prefs)
     return {"message": "Preferences updated", "preferences": prefs.model_dump()}
 
 

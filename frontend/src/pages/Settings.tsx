@@ -76,7 +76,20 @@ function Settings() {
 }
 
 // General Settings Component
+interface Preferences {
+  default_account_id: number | null
+  default_currency: string
+  date_format: string
+  language: string
+  theme: string
+  email_notifications: boolean
+}
+
 function GeneralSettings() {
+  const queryClient = useQueryClient()
+  const [prefs, setPrefs] = useState<Preferences | null>(null)
+  const [saved, setSaved] = useState(false)
+
   const { data: currencies } = useQuery({
     queryKey: ['currencies'],
     queryFn: async () => {
@@ -85,6 +98,28 @@ function GeneralSettings() {
     },
   })
 
+  useQuery({
+    queryKey: ['preferences'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/settings/preferences`)
+      setPrefs(res.data as Preferences)
+      return res.data as Preferences
+    },
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Preferences) => {
+      await axios.put(`${API_URL}/api/v1/settings/preferences`, data)
+    },
+    onSuccess: () => {
+      setSaved(true)
+      queryClient.invalidateQueries({ queryKey: ['preferences'] })
+      setTimeout(() => setSaved(false), 2500)
+    },
+  })
+
+  const update = (patch: Partial<Preferences>) => setPrefs((p) => (p ? { ...p, ...patch } : p))
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Allgemeine Einstellungen</h2>
@@ -92,7 +127,11 @@ function GeneralSettings() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-gray-700">Standardwährung</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+          <select
+            value={prefs?.default_currency || 'CHF'}
+            onChange={(e) => update({ default_currency: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
             {currencies && Object.entries(currencies.currencies).map(([code, curr]: [string, any]) => (
               <option key={code} value={code}>
                 {curr.symbol} {code} - {curr.name}
@@ -106,7 +145,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Datumsformat</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+          <select
+            value={prefs?.date_format || 'DD.MM.YYYY'}
+            onChange={(e) => update({ date_format: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
             <option value="DD.MM.YYYY">DD.MM.YYYY (07.12.2024)</option>
             <option value="MM/DD/YYYY">MM/DD/YYYY (12/07/2024)</option>
             <option value="YYYY-MM-DD">YYYY-MM-DD (2024-12-07)</option>
@@ -115,7 +158,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Sprache</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+          <select
+            value={prefs?.language || 'de'}
+            onChange={(e) => update({ language: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          >
             <option value="de">Deutsch</option>
             <option value="en">English</option>
             <option value="fr">Français</option>
@@ -125,7 +172,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Theme</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+          <select
+            value={prefs?.theme || 'light'}
+            onChange={(e) => update({ theme: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          >
             <option value="light">Hell</option>
             <option value="dark">Dunkel</option>
             <option value="auto">System</option>
@@ -134,13 +185,25 @@ function GeneralSettings() {
       </div>
 
       <div className="flex items-center">
-        <input type="checkbox" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+        <input
+          type="checkbox"
+          checked={prefs?.email_notifications ?? true}
+          onChange={(e) => update({ email_notifications: e.target.checked })}
+          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+        />
         <label className="ml-2 block text-sm text-gray-900">Email-Benachrichtigungen aktivieren</label>
       </div>
 
-      <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-        Speichern
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => prefs && saveMutation.mutate(prefs)}
+          disabled={!prefs || saveMutation.isPending}
+          className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 disabled:opacity-50"
+        >
+          {saveMutation.isPending ? 'Speichern…' : 'Speichern'}
+        </button>
+        {saved && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+      </div>
     </div>
   )
 }
