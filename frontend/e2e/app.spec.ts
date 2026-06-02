@@ -13,7 +13,7 @@ test('dashboard widgets, navigation and transaction filter', async ({ page }) =>
 
   // Transactions: filter bar wired up (search with no data -> "Keine Treffer")
   await page.getByRole('link', { name: 'Transaktionen' }).click()
-  await expect(page.getByRole('heading', { name: 'Transaktionen' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Transaktionen', exact: true })).toBeVisible()
   const search = page.getByPlaceholder('Beschreibung…')
   await expect(search).toBeVisible()
   await search.fill('zzz-kein-treffer')
