@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 /**
  * Attach a CTAP2 virtual authenticator via the Chrome DevTools Protocol so the
