@@ -19,7 +19,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-type Tab = 'general' | 'federation' | 'mirrors' | 'telegram' | 'categories' | 'security'
+type Tab = 'general' | 'federation' | 'mirrors' | 'telegram' | 'categories' | 'integrations' | 'security'
 
 function Settings() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
@@ -30,6 +30,7 @@ function Settings() {
     { id: 'mirrors', label: 'Mirror Instanzen', icon: Server },
     { id: 'telegram', label: 'Telegram Bot', icon: MessageSquare },
     { id: 'categories', label: 'Kategorien', icon: Tag },
+    { id: 'integrations', label: 'Integrationen', icon: Key },
     { id: 'security', label: 'Sicherheit', icon: Shield },
   ]
 
@@ -69,6 +70,7 @@ function Settings() {
         {activeTab === 'mirrors' && <MirrorSettings />}
         {activeTab === 'telegram' && <TelegramSettings />}
         {activeTab === 'categories' && <CategorySettings />}
+        {activeTab === 'integrations' && <IntegrationsSettings />}
         {activeTab === 'security' && <SecuritySettings />}
       </div>
     </div>
@@ -989,6 +991,127 @@ function CategoryManager() {
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  )
+}
+
+interface ApiKeyItem {
+  id: number
+  name: string | null
+  key_prefix: string
+  active: boolean
+}
+
+function IntegrationsSettings() {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [newToken, setNewToken] = useState<string | null>(null)
+
+  const pushUrl = `${API_URL || window.location.origin}/api/v1/integrations/receipt-bot/transactions`
+
+  const { data: keys } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/integrations/api-keys`)
+      return res.data as ApiKeyItem[]
+    },
+  })
+
+  const createKey = useMutation({
+    mutationFn: async () => {
+      const res = await axios.post(`${API_URL}/api/v1/integrations/api-keys`, { name: name.trim() || null })
+      return res.data as { token: string }
+    },
+    onSuccess: (data) => {
+      setNewToken(data.token)
+      setName('')
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+
+  const revokeKey = useMutation({
+    mutationFn: async (id: number) => { await axios.delete(`${API_URL}/api/v1/integrations/api-keys/${id}`) },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Integrationen</h2>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-medium text-blue-900 mb-2">🧾 Quittungsabrechnungsbot</h3>
+        <p className="text-sm text-blue-700 mb-2">
+          Der Bot kann Transaktionen über die API an den Money Manager schicken. Sie landen in
+          einem speziellen Konto <code className="bg-blue-100 px-1 rounded">Quittungsabrechnung</code>.
+        </p>
+        <p className="text-sm text-blue-700">Endpoint (Header <code className="bg-blue-100 px-1 rounded">X-API-Key</code>):</p>
+        <code className="block bg-white border border-blue-200 rounded px-2 py-1 mt-1 text-xs break-all">
+          POST {pushUrl}
+        </code>
+      </div>
+
+      {newToken && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-sm text-green-900 font-medium mb-1">Neuer API-Key – jetzt kopieren, wird nur einmal angezeigt:</p>
+          <code className="block bg-white border border-green-200 rounded px-2 py-1 text-xs break-all">{newToken}</code>
+          <button onClick={() => setNewToken(null)} className="text-xs text-green-700 mt-2 hover:underline">Schließen</button>
+        </div>
+      )}
+
+      <div>
+        <h3 className="font-medium mb-2">API-Keys</h3>
+        <div className="flex items-end gap-2 mb-3">
+          <div className="flex-1 max-w-xs">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Name (optional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z. B. Quittungsbot"
+              className="w-full rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <button
+            onClick={() => createKey.mutate()}
+            disabled={createKey.isPending}
+            className="bg-primary-600 text-white px-3 py-2 rounded text-sm hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" /> Key erstellen
+          </button>
+        </div>
+
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Name</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Prefix</th>
+                <th className="px-4 py-2 text-right font-medium text-gray-500">Aktion</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(!keys || keys.length === 0) && (
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Noch keine API-Keys.</td></tr>
+              )}
+              {keys?.map((k) => (
+                <tr key={k.id}>
+                  <td className="px-4 py-2 text-gray-900">{k.name || '–'}</td>
+                  <td className="px-4 py-2 text-gray-500"><code className="text-xs">{k.key_prefix}…</code></td>
+                  <td className="px-4 py-2 text-right">
+                    <button
+                      onClick={() => { if (confirm('API-Key widerrufen?')) revokeKey.mutate(k.id) }}
+                      className="text-red-600 hover:text-red-800"
+                      title="Widerrufen"
+                    >
+                      <Trash2 className="w-4 h-4 inline" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

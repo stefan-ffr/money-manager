@@ -32,6 +32,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   savings: 'Sparkonto',
   credit_card: 'Kreditkarte',
   cash: 'Bargeld',
+  receipt_bot: 'Quittungsabrechnung',
 }
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']

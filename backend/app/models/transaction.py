@@ -19,6 +19,7 @@ class Transaction(Base):
     requires_confirmation = Column(Boolean, default=False)  # Rot markiert wenn True
     receipt_path = Column(String(255), nullable=True)
     telegram_message_id = Column(BigInteger, nullable=True)
+    external_ref = Column(String(128), nullable=True, index=True)  # external id (e.g. receipt-bot) for idempotency
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

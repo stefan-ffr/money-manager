@@ -10,6 +10,7 @@ from app.models.audit_log import AuditLog
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.user_preference import UserPreference
 from app.models.federation_peer import FederationPeer
+from app.models.api_key import ApiKey
 from app.core.database import Base
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "RecurringTransaction",
     "UserPreference",
     "FederationPeer",
+    "ApiKey",
 ]

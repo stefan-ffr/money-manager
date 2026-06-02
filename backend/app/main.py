@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation, two_factor, recurring
+from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation, two_factor, recurring, integrations
 from app.core.database import engine, SessionLocal
 from app.models import base
 import os
@@ -50,6 +50,7 @@ app.include_router(bank_import.router, prefix="/api/v1/import", tags=["bank-impo
 app.include_router(replication.router, prefix="/api/v1/replication", tags=["replication"])
 app.include_router(reconciliation.router, prefix="/api/v1", tags=["reconciliation"])
 app.include_router(recurring.router, prefix="/api/v1/recurring", tags=["recurring"])
+app.include_router(integrations.router, prefix="/api/v1/integrations", tags=["integrations"])
 
 
 @app.get("/")
