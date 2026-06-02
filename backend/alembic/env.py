@@ -17,6 +17,7 @@ from app.models.transaction import Transaction
 from app.models.category import Category
 from app.models.user import User
 from app.models.shared_account import SharedAccount, SharedAccountMember
+from app.models.recurring_transaction import RecurringTransaction
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
