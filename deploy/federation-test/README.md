@@ -10,16 +10,21 @@ und `/.well-known/money-instance` an das Backend – kein separates `api.`-Subdo
 
 ## 0. DNS (für beide Instanzen)
 
-Beim DNS-Provider von `juroct.net` je einen A/AAAA-Record auf die jeweilige LXC-IP:
+Beim DNS-Provider Cloudflare (Zone `juroct.ch`) je einen A/AAAA-Record auf die jeweilige LXC-IP:
 
 ```
-money-a.th1.juroct.net   →  <IP LXC A>
-money-b.th1.juroct.net   →  <IP LXC B>
+money-a.juroct.ch   →  <IP LXC A>
+money-b.juroct.ch   →  <IP LXC B>
 ```
 
-DNS-01 braucht **API-Zugang zum DNS-Provider**. Standard hier: Cloudflare-Token
-(`Zone:DNS:Edit`). Anderer Provider? In `traefik.dns01.yml` `DNS_PROVIDER` + die
-Credential-Variablen anpassen (siehe https://doc.traefik.io/traefik/https/acme/#providers).
+> **Cloudflare:** Die A-Records für den Test auf **„DNS only" (graue Wolke)** stellen –
+> dann terminiert Traefik das Let's-Encrypt-Zertifikat direkt am LXC. Bei „Proxied"
+> (orange) terminiert Cloudflare TLS (SSL-Modus **Full (strict)** nötig) und der
+> Server-zu-Server-`/.well-known`-Abruf läuft über Cloudflare. Für den Test: grau = einfacher.
+
+DNS-01 braucht ein **Cloudflare-API-Token** mit Scope `Zone:DNS:Edit` **und** `Zone:Zone:Read`
+für die Zone `juroct.ch` (Cloudflare → My Profile → API Tokens). In
+`deploy/federation-test/.env` als `CF_DNS_API_TOKEN` eintragen.
 
 ## 1. LXC anlegen (pro Instanz, in Proxmox)
 
@@ -48,14 +53,14 @@ $EDITOR .env
 
 In **`.env`** (Root) pro Instanz mindestens setzen:
 ```env
-DOMAIN=money-a.th1.juroct.net          # B-LXC: money-b.th1.juroct.net
+DOMAIN=money-a.juroct.ch          # B-LXC: money-b.juroct.ch
 POSTGRES_PASSWORD=<stark>
 SECRET_KEY=<lang-zufällig>
 FEDERATION_ENABLED=true
-INSTANCE_DOMAIN=money-a.th1.juroct.net  # = DOMAIN
-WEBAUTHN_RP_ID=money-a.th1.juroct.net
-WEBAUTHN_ORIGIN=https://money-a.th1.juroct.net
-CORS_ORIGINS=https://money-a.th1.juroct.net
+INSTANCE_DOMAIN=money-a.juroct.ch  # = DOMAIN
+WEBAUTHN_RP_ID=money-a.juroct.ch
+WEBAUTHN_ORIGIN=https://money-a.juroct.ch
+CORS_ORIGINS=https://money-a.juroct.ch
 ```
 
 ## 3. Starten (pro LXC)
@@ -70,29 +75,29 @@ docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compo
 
 Prüfen (von irgendwo):
 ```bash
-curl https://money-a.th1.juroct.net/.well-known/money-instance   # muss public_key + api_endpoint liefern
+curl https://money-a.juroct.ch/.well-known/money-instance   # muss public_key + api_endpoint liefern
 ```
 
 ## 4. Benutzer anlegen
 
 Auf **jeder** Instanz im Browser `https://money-a…` öffnen → Registrieren (Passkey).
 Der Empfänger-User auf B muss einen **Username** haben, den du beim Senden adressierst
-(`username@money-b.th1.juroct.net`). Beide Nutzer sollten **Admin** sein, um Peers zu pairen
+(`username@money-b.juroct.ch`). Beide Nutzer sollten **Admin** sein, um Peers zu pairen
 (erster registrierter User ist i. d. R. Superuser; sonst in der DB `is_superuser=true` setzen).
 
 ## 5. Pairing (beide Seiten bewilligen)
 
-UI: *Einstellungen → Federation → Bewilligte Instanzen* → auf A `money-b.th1.juroct.net`
-hinzufügen (**Pairen**), auf B `money-a.th1.juroct.net`. Oder per API – siehe
+UI: *Einstellungen → Federation → Bewilligte Instanzen* → auf A `money-b.juroct.ch`
+hinzufügen (**Pairen**), auf B `money-a.juroct.ch`. Oder per API – siehe
 [../../FEDERATION_SETUP.md](../../FEDERATION_SETUP.md).
 
 ## 6. Testbuchung
 
 Auf A eine föderierte Rechnung an B senden:
 ```bash
-curl -X POST https://money-a.th1.juroct.net/api/v1/federation/invoice/send \
+curl -X POST https://money-a.juroct.ch/api/v1/federation/invoice/send \
      -H "Authorization: Bearer <USER_TOKEN_A>" -H "Content-Type: application/json" \
-     -d '{"to_user":"<userB>@money-b.th1.juroct.net","amount":"12.50","currency":"CHF","description":"Test","date":"2026-06-02"}'
+     -d '{"to_user":"<userB>@money-b.juroct.ch","amount":"12.50","currency":"CHF","description":"Test","date":"2026-06-02"}'
 ```
 Auf B sollte die Buchung als **bestätigungspflichtig** erscheinen → akzeptieren/ablehnen.
 
