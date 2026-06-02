@@ -28,15 +28,16 @@ class Currency:
 
     def format(self, amount: Decimal) -> str:
         """Format amount with currency symbol"""
-        # Format number with separators
+        # Python formats with "," for thousands and "." for decimals.
         amount_str = f"{amount:,.{self.decimal_places}f}"
-        
-        # Replace separators if needed
-        if self.thousands_separator != ",":
-            amount_str = amount_str.replace(",", self.thousands_separator)
-        if self.decimal_separator != ".":
-            amount_str = amount_str.replace(".", self.decimal_separator)
-        
+
+        # Swap to the currency's separators via a placeholder so the two
+        # replacements never collide (e.g. EUR uses "." thousands + "," decimals).
+        placeholder = "\x00"
+        amount_str = amount_str.replace(",", placeholder)
+        amount_str = amount_str.replace(".", self.decimal_separator)
+        amount_str = amount_str.replace(placeholder, self.thousands_separator)
+
         # Add symbol
         if self.symbol_position == "before":
             return f"{self.symbol}{amount_str}"

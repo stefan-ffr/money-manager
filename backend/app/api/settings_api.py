@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict
+from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.security import get_current_user
+from app.core.authorization import get_current_admin_user
+from app.core.audit import record_audit
 from app.models.category import Category
+from app.models.audit_log import AuditLog
+from app.models.user import User
+from app.models.user_preference import UserPreference
 
 router = APIRouter()
 
@@ -55,22 +63,32 @@ class SecuritySettings(BaseModel):
 
 
 # GET Endpoints
+def _get_or_create_preferences(db: Session, user: User) -> UserPreference:
+    prefs = db.query(UserPreference).filter(UserPreference.user_id == user.id).first()
+    if not prefs:
+        prefs = UserPreference(user_id=user.id)
+        db.add(prefs)
+        db.commit()
+        db.refresh(prefs)
+    return prefs
+
+
 @router.get("/preferences")
-async def get_preferences(db: Session = Depends(get_db)):
-    """Get user preferences"""
-    # TODO: Store in database per user
+async def get_preferences(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get the current user's stored preferences."""
+    prefs = _get_or_create_preferences(db, current_user)
     return {
-        "default_account_id": None,
-        "default_currency": "CHF",
-        "date_format": "DD.MM.YYYY",
-        "language": "de",
-        "theme": "light",
-        "email_notifications": True
+        "default_account_id": prefs.default_account_id,
+        "default_currency": prefs.default_currency,
+        "date_format": prefs.date_format,
+        "language": prefs.language,
+        "theme": prefs.theme,
+        "email_notifications": prefs.email_notifications,
     }
 
 
 @router.get("/federation")
-async def get_federation_settings(db: Session = Depends(get_db)):
+async def get_federation_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get federation settings"""
     return {
         "enabled": settings.FEDERATION_ENABLED,
@@ -81,14 +99,14 @@ async def get_federation_settings(db: Session = Depends(get_db)):
 
 
 @router.get("/mirrors")
-async def get_mirror_instances(db: Session = Depends(get_db)):
+async def get_mirror_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get configured mirror instances"""
     # TODO: Load from database
     return []
 
 
 @router.get("/telegram")
-async def get_telegram_settings(db: Session = Depends(get_db)):
+async def get_telegram_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Get Telegram bot settings"""
     return {
         "bot_token": settings.TELEGRAM_BOT_TOKEN if settings.TELEGRAM_BOT_TOKEN else None,
@@ -99,7 +117,7 @@ async def get_telegram_settings(db: Session = Depends(get_db)):
 
 
 @router.get("/categories/mappings")
-async def get_category_mappings(db: Session = Depends(get_db)):
+async def get_category_mappings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get EasyTax category mappings"""
     categories = db.query(Category).all()
     return [
@@ -114,7 +132,7 @@ async def get_category_mappings(db: Session = Depends(get_db)):
 
 
 @router.get("/security")
-async def get_security_settings(db: Session = Depends(get_db)):
+async def get_security_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get security settings"""
     return {
         "passkey_enabled": False,
@@ -126,21 +144,25 @@ async def get_security_settings(db: Session = Depends(get_db)):
 
 # POST/PUT Endpoints
 @router.put("/preferences")
-async def update_preferences(prefs: UserPreferences, db: Session = Depends(get_db)):
-    """Update user preferences"""
-    # TODO: Store in database per user
+async def update_preferences(prefs: UserPreferences, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Persist the current user's preferences."""
+    db_prefs = _get_or_create_preferences(db, current_user)
+    for key, value in prefs.model_dump().items():
+        setattr(db_prefs, key, value)
+    db.commit()
+    db.refresh(db_prefs)
     return {"message": "Preferences updated", "preferences": prefs.model_dump()}
 
 
 @router.put("/federation")
-async def update_federation_settings(settings: FederationSettings, db: Session = Depends(get_db)):
+async def update_federation_settings(settings: FederationSettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update federation settings"""
     # TODO: Update in config/database
     return {"message": "Federation settings updated"}
 
 
 @router.post("/mirrors")
-async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depends(get_db)):
+async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Add new mirror instance"""
     from app.models.shared_account import MirrorInstance
     
@@ -159,21 +181,21 @@ async def add_mirror_instance(mirror: MirrorInstanceConfig, db: Session = Depend
 
 
 @router.delete("/mirrors/{mirror_id}")
-async def remove_mirror_instance(mirror_id: int, db: Session = Depends(get_db)):
+async def remove_mirror_instance(mirror_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Remove mirror instance"""
     # TODO: Delete from database
     return {"message": "Mirror instance removed"}
 
 
 @router.put("/telegram")
-async def update_telegram_settings(settings: TelegramSettings, db: Session = Depends(get_db)):
+async def update_telegram_settings(settings: TelegramSettings, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update Telegram settings"""
     # TODO: Update environment or config
     return {"message": "Telegram settings updated"}
 
 
 @router.post("/categories/mappings")
-async def create_category_mapping(mapping: CategoryMapping, db: Session = Depends(get_db)):
+async def create_category_mapping(mapping: CategoryMapping, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create or update category mapping"""
     category = db.query(Category).filter(Category.name == mapping.category_name).first()
     
@@ -188,20 +210,83 @@ async def create_category_mapping(mapping: CategoryMapping, db: Session = Depend
     
     db.commit()
     db.refresh(category)
-    
+
     return {"message": "Category mapping created", "category": category}
 
 
+@router.get("/categories/easytax-export")
+async def export_easytax_csv(
+    period_start: str | None = None,
+    period_end: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export the user's transactions grouped by EasyTax code as a CSV.
+
+    Optional ISO dates (YYYY-MM-DD) limit the period. The file can be imported
+    into the Swiss EasyTax software.
+    """
+    import csv
+    import io
+    from datetime import date as date_cls
+    from fastapi.responses import Response
+    from app.models.transaction import Transaction
+
+    # Map category name -> EasyTax code (system categories + the user's own)
+    categories = db.query(Category).filter(
+        (Category.user_id == None) | (Category.user_id == current_user.id)  # noqa: E711
+    ).all()
+    code_by_name = {c.name: (c.easytax_code or "") for c in categories}
+
+    # Collect the user's transactions in the requested period
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    if period_start:
+        try:
+            query = query.filter(Transaction.date >= date_cls.fromisoformat(period_start))
+        except ValueError:
+            raise HTTPException(400, "period_start must be YYYY-MM-DD")
+    if period_end:
+        try:
+            query = query.filter(Transaction.date <= date_cls.fromisoformat(period_end))
+        except ValueError:
+            raise HTTPException(400, "period_end must be YYYY-MM-DD")
+
+    # Aggregate amount and count per (EasyTax code, category)
+    groups: Dict[tuple, dict] = {}
+    for tx in query.all():
+        cat_name = tx.category or "Ohne Kategorie"
+        code = code_by_name.get(cat_name, "")
+        key = (code, cat_name)
+        bucket = groups.setdefault(key, {"amount": Decimal("0.00"), "count": 0})
+        bucket["amount"] += tx.amount
+        bucket["count"] += 1
+
+    # Build the CSV (semicolon-separated, EasyTax/Swiss convention)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";")
+    writer.writerow(["EasyTax-Code", "Kategorie", "Anzahl", "Betrag"])
+    for (code, cat_name), data in sorted(groups.items(), key=lambda kv: (kv[0][0] or "zzz", kv[0][1])):
+        writer.writerow([code, cat_name, data["count"], f"{data['amount']:.2f}"])
+
+    filename = f"easytax_export_{period_start or 'alle'}_{period_end or 'alle'}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.put("/security")
-async def update_security_settings(settings: SecuritySettings, db: Session = Depends(get_db)):
+async def update_security_settings(settings: SecuritySettings, http_request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     """Update security settings"""
     # TODO: Store in database
+    record_audit(db, "settings.security_updated", user_id=current_user.id, request=http_request)
     return {"message": "Security settings updated"}
 
 
 # Utility Endpoints
 @router.post("/test-federation")
-async def test_federation_connection(instance_url: str):
+async def test_federation_connection(instance_url: str, current_user: User = Depends(get_current_admin_user)):
     """Test connection to another instance"""
     import httpx
     
@@ -228,13 +313,19 @@ async def test_federation_connection(instance_url: str):
 
 
 @router.post("/generate-federation-keys")
-async def generate_federation_keys():
-    """Generate new RSA key pair for federation"""
+async def generate_federation_keys(
+    http_request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Generate new RSA key pair for federation (admin only)."""
     from app.federation.crypto import generate_key_pair, get_public_key_pem
-    
+
     generate_key_pair()
     public_key = get_public_key_pem()
-    
+
+    record_audit(db, "federation.keys_regenerated", user_id=current_user.id, request=http_request)
+
     return {
         "message": "New key pair generated",
         "public_key": public_key
@@ -242,18 +333,31 @@ async def generate_federation_keys():
 
 
 @router.get("/export-data")
-async def export_all_data(db: Session = Depends(get_db)):
-    """Export all user data as JSON"""
+async def export_all_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export the current user's own accounts and transactions as JSON."""
     from app.models.account import Account
     from app.models.transaction import Transaction
-    
-    accounts = db.query(Account).all()
-    transactions = db.query(Transaction).all()
-    
+
+    # Admins may export everything; regular users only their own data
+    acc_query = db.query(Account)
+    tx_query = db.query(Transaction)
+    if not current_user.is_superuser:
+        acc_query = acc_query.filter(Account.user_id == current_user.id)
+        tx_query = tx_query.filter(Transaction.user_id == current_user.id)
+
+    def serialize(obj):
+        return {
+            c.name: getattr(obj, c.name)
+            for c in obj.__table__.columns
+        }
+
     return {
-        "accounts": [acc.__dict__ for acc in accounts],
-        "transactions": [tx.__dict__ for tx in transactions],
-        "exported_at": "2024-12-07T12:00:00Z"
+        "accounts": [serialize(acc) for acc in acc_query.all()],
+        "transactions": [serialize(tx) for tx in tx_query.all()],
+        "exported_at": datetime.utcnow().isoformat() + "Z",
     }
 
 
@@ -261,8 +365,35 @@ async def export_all_data(db: Session = Depends(get_db)):
 async def get_currencies():
     """Get list of all supported currencies"""
     from app.core.currencies import get_all_currencies
-    
+
     return {
         "currencies": get_all_currencies(),
         "default": "CHF"
     }
+
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return audit-log entries. Admins see all; users see only their own."""
+    limit = max(1, min(limit, 500))
+    query = db.query(AuditLog)
+    if not current_user.is_superuser:
+        query = query.filter(AuditLog.user_id == current_user.id)
+
+    entries = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": e.id,
+            "user_id": e.user_id,
+            "action": e.action,
+            "target_user_id": e.target_user_id,
+            "details": e.details,
+            "ip_address": e.ip_address,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in entries
+    ]

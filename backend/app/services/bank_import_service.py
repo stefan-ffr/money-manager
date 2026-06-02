@@ -72,25 +72,25 @@ class BankImportService:
         
         return None
     
-    def find_matching_account(self, bank_identifier: str) -> Optional[Account]:
-        """Finde Account basierend auf Bank Identifier"""
+    def find_matching_account(self, bank_identifier: str, user_id: Optional[int] = None) -> Optional[Account]:
+        """Finde Account basierend auf Bank Identifier (optional auf User eingeschränkt)"""
         if not bank_identifier:
             return None
-        
+
         # Exakte Match auf bank_identifier
-        account = self.db.query(Account).filter(
-            Account.bank_identifier == bank_identifier
-        ).first()
-        
+        query = self.db.query(Account).filter(Account.bank_identifier == bank_identifier)
+        if user_id is not None:
+            query = query.filter(Account.user_id == user_id)
+        account = query.first()
+
         if account:
             return account
-        
+
         # Fallback: Match auf IBAN field
-        account = self.db.query(Account).filter(
-            Account.iban == bank_identifier
-        ).first()
-        
-        return account
+        query = self.db.query(Account).filter(Account.iban == bank_identifier)
+        if user_id is not None:
+            query = query.filter(Account.user_id == user_id)
+        return query.first()
     
     def parse_postfinance(self, csv_content: str) -> List[Dict]:
         """Parse PostFinance CSV Format"""
@@ -197,7 +197,8 @@ class BankImportService:
         self,
         csv_content: str,
         account_id: Optional[int] = None,
-        auto_match: bool = True
+        auto_match: bool = True,
+        user_id: Optional[int] = None
     ) -> Dict:
         """
         Hauptfunktion: Importiere CSV
@@ -222,11 +223,14 @@ class BankImportService:
         # Auto-match account wenn nicht gegeben
         account = None
         if account_id:
-            account = self.db.query(Account).filter(Account.id == account_id).first()
+            query = self.db.query(Account).filter(Account.id == account_id)
+            if user_id is not None:
+                query = query.filter(Account.user_id == user_id)
+            account = query.first()
         elif auto_match:
             bank_identifier = self.extract_account_identifier(csv_content, bank)
             if bank_identifier:
-                account = self.find_matching_account(bank_identifier)
+                account = self.find_matching_account(bank_identifier, user_id=user_id)
         
         if not account:
             return {
@@ -272,6 +276,7 @@ class BankImportService:
             
             # Create transaction
             transaction = Transaction(
+                user_id=account.user_id,  # required (NOT NULL) – inherit from account owner
                 account_id=account.id,
                 date=tx_data['date'],
                 amount=tx_data['amount'],
@@ -280,13 +285,13 @@ class BankImportService:
                 source='csv_import',
                 requires_confirmation=True  # CSV Imports müssen bestätigt werden!
             )
-            
+
             self.db.add(transaction)
+            # Keep account balance in sync with imported transactions
+            account.balance = (account.balance or Decimal("0.00")) + tx_data['amount']
             created += 1
-        
-        self.db.commit()
-        
-        # Update account last_import_date
+
+        # Update account last_import_date as part of the same commit
         account.last_import_date = datetime.utcnow()
         self.db.commit()
         

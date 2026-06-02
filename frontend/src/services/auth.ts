@@ -63,9 +63,28 @@ export async function registerWithPasskey(
 }
 
 /**
+ * Whether this browser/context can use Passkeys (WebAuthn).
+ * Requires a secure context (HTTPS or localhost) and PublicKeyCredential support.
+ */
+export function isPasskeySupported(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.isSecureContext === true &&
+    typeof window.PublicKeyCredential !== 'undefined'
+  )
+}
+
+/**
  * Login with Passkey authentication
  */
 export async function loginWithPasskey(username: string): Promise<AuthTokens> {
+  if (!isPasskeySupported()) {
+    throw new Error(
+      window.isSecureContext === false
+        ? 'Passkeys benötigen eine sichere Verbindung (HTTPS). Bitte öffne die App über HTTPS oder nutze die SSO-Anmeldung.'
+        : 'Dieser Browser unterstützt keine Passkeys. Bitte nutze einen aktuellen Browser (Chrome, Firefox, Safari, Edge) oder die SSO-Anmeldung.'
+    )
+  }
   try {
     // 1. Start authentication - get challenge from server
     const beginResponse = await axios.post(`${API_URL}/api/v1/auth/login/begin`, {

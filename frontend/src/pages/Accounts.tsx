@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
+import { CURRENCY_LIST } from '../lib/currencies'
 import {
   PlusCircle,
   CreditCard,
@@ -68,6 +69,7 @@ function Accounts() {
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const [receiptPreview, setReceiptPreview] = useState<{ transactionId: number; path: string } | null>(null)
   const [pendingReceipt, setPendingReceipt] = useState<File | null>(null)
 
@@ -174,6 +176,23 @@ function Accounts() {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       setShowMoveModal(false)
       handleNewTransaction()
+    },
+  })
+
+  const transferMutation = useMutation({
+    mutationFn: async (data: {
+      from_account_id: number
+      to_account_id: number
+      amount: number
+      date: string
+      description: string
+    }) => {
+      await axios.post(`${API_URL}/api/v1/transactions/transfer`, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      setShowTransferModal(false)
     },
   })
 
@@ -348,6 +367,15 @@ function Accounts() {
               className="text-primary-600 hover:text-primary-700 px-3 py-1 border border-primary-600 rounded-md text-sm"
             >
               Konto bearbeiten
+            </button>
+            <button
+              onClick={() => setShowTransferModal(true)}
+              disabled={!accounts || accounts.length < 2}
+              title={!accounts || accounts.length < 2 ? 'Mindestens zwei Konten nötig' : 'Geld zwischen eigenen Konten umbuchen'}
+              className="text-blue-600 hover:text-blue-700 px-3 py-1 border border-blue-600 rounded-md text-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              Umbuchen
             </button>
             <button
               onClick={() => {
@@ -641,6 +669,20 @@ function Accounts() {
         />
       )}
 
+      {showTransferModal && (
+        <TransferModal
+          accounts={accounts || []}
+          defaultFromAccountId={selectedAccountId}
+          isPending={transferMutation.isPending}
+          error={(transferMutation.error as any)?.response?.data?.detail}
+          onClose={() => {
+            setShowTransferModal(false)
+            transferMutation.reset()
+          }}
+          onTransfer={(data) => transferMutation.mutate(data)}
+        />
+      )}
+
       {receiptPreview && (
         <ReceiptPreviewModal
           transactionId={receiptPreview.transactionId}
@@ -648,6 +690,171 @@ function Accounts() {
           onClose={() => setReceiptPreview(null)}
         />
       )}
+    </div>
+  )
+}
+
+interface TransferModalProps {
+  accounts: Account[]
+  defaultFromAccountId: number | null
+  isPending: boolean
+  error?: string
+  onClose: () => void
+  onTransfer: (data: {
+    from_account_id: number
+    to_account_id: number
+    amount: number
+    date: string
+    description: string
+  }) => void
+}
+
+function TransferModal({
+  accounts,
+  defaultFromAccountId,
+  isPending,
+  error,
+  onClose,
+  onTransfer,
+}: TransferModalProps) {
+  const initialFrom = defaultFromAccountId || accounts[0]?.id || 0
+  const [fromId, setFromId] = useState<number>(initialFrom)
+  const [toId, setToId] = useState<number>(
+    accounts.find((a) => a.id !== initialFrom)?.id || 0
+  )
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [description, setDescription] = useState('')
+
+  const fromAccount = accounts.find((a) => a.id === fromId)
+  const toAccount = accounts.find((a) => a.id === toId)
+  const currencyMismatch =
+    fromAccount && toAccount && fromAccount.currency !== toAccount.currency
+  const sameAccount = fromId === toId
+  const amountValue = parseFloat(amount)
+  const canSubmit =
+    !sameAccount && !currencyMismatch && amountValue > 0 && !isPending
+
+  const handleSubmit = () => {
+    if (!canSubmit) return
+    onTransfer({
+      from_account_id: fromId,
+      to_account_id: toId,
+      amount: amountValue,
+      date,
+      description,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5 text-blue-600" />
+            Geld umbuchen
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Von Konto *</label>
+            <select
+              value={fromId}
+              onChange={(e) => setFromId(Number(e.target.value))}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+            >
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({parseFloat(a.balance).toFixed(2)} {a.currency})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Auf Konto *</label>
+            <select
+              value={toId}
+              onChange={(e) => setToId(Number(e.target.value))}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+            >
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({parseFloat(a.balance).toFixed(2)} {a.currency})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Betrag * {fromAccount ? `(${fromAccount.currency})` : ''}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Datum *</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="z. B. Sparen für Urlaub"
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+            />
+          </div>
+
+          {sameAccount && (
+            <p className="text-sm text-red-600">Quell- und Zielkonto müssen unterschiedlich sein.</p>
+          )}
+          {currencyMismatch && (
+            <p className="text-sm text-red-600">
+              Umbuchung nur zwischen Konten gleicher Währung möglich
+              ({fromAccount?.currency} ≠ {toAccount?.currency}).
+            </p>
+          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-3 border-t px-6 py-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            {isPending ? 'Wird gebucht…' : 'Umbuchen'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -792,10 +999,11 @@ function AccountModal({ account, onClose, onSuccess }: AccountModalProps) {
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 required
               >
-                <option value="CHF">CHF</option>
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
+                {CURRENCY_LIST.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} – {c.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

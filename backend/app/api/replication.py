@@ -309,14 +309,24 @@ async def receive_sync_data(
 @router.get("/changes")
 async def get_changes(
     since: datetime,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_instance: str = Header(..., alias="X-Instance"),
 ):
     """
     Get changes since timestamp for mirror to pull
 
-    This endpoint is called by other instances to pull data from us
+    This endpoint is called by other instances to pull data from us.
+    Only reachable when replication is enabled and the caller identifies as a
+    known mirror instance (prevents anonymous bulk data exfiltration).
     """
-    # Note: In production, you should verify the requester is a known mirror instance
+    if not settings.REPLICATION_ENABLED:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Replication not enabled")
+
+    mirror = db.query(MirrorInstance).filter(
+        MirrorInstance.instance_id == x_instance
+    ).first()
+    if not mirror:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unknown mirror instance")
 
     # Get transactions
     transactions = db.query(Transaction).filter(

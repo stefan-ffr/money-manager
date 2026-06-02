@@ -14,4 +14,17 @@ export default defineConfig({
     host: true,
     port: 3000,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy / rarely-changing vendor code into separate chunks so the
+        // main app bundle stays small and recharts loads as its own chunk.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          query: ['@tanstack/react-query', 'axios'],
+        },
+      },
+    },
+  },
 })

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -25,6 +25,7 @@ from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import create_access_token, get_current_user
+from app.core.audit import record_audit
 from app.models.user import User, WebAuthnCredential
 
 router = APIRouter()
@@ -96,7 +97,7 @@ async def begin_registration(
 
     # Generate registration options
     options = generate_registration_options(
-        rp_id=settings.INSTANCE_DOMAIN,
+        rp_id=settings.webauthn_rp_id,
         rp_name="Money Manager",
         user_id=str(user.id).encode(),
         user_name=request.username,
@@ -125,6 +126,7 @@ async def begin_registration(
 @router.post("/auth/register/complete")
 async def complete_registration(
     request: RegistrationCompleteRequest,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -153,8 +155,8 @@ async def complete_registration(
         verification = verify_registration_response(
             credential=request.credential,
             expected_challenge=challenge,
-            expected_rp_id=settings.INSTANCE_DOMAIN,
-            expected_origin=f"https://{settings.INSTANCE_DOMAIN}",
+            expected_rp_id=settings.webauthn_rp_id,
+            expected_origin=settings.webauthn_origin,
         )
 
         # Store credential
@@ -173,6 +175,11 @@ async def complete_registration(
 
         # Generate access token
         access_token = create_access_token({"sub": str(user.id)})
+
+        record_audit(
+            db, "user.register", user_id=user.id,
+            details={"device_name": request.device_name}, request=http_request,
+        )
 
         return {
             "message": "Registration successful",
@@ -225,7 +232,7 @@ async def begin_authentication(
 
     # Generate authentication options
     options = generate_authentication_options(
-        rp_id=settings.INSTANCE_DOMAIN,
+        rp_id=settings.webauthn_rp_id,
         allow_credentials=[
             PublicKeyCredentialDescriptor(id=cred.credential_id)
             for cred in credentials
@@ -245,6 +252,7 @@ async def begin_authentication(
 @router.post("/auth/login/complete", response_model=TokenResponse)
 async def complete_authentication(
     request: AuthenticationCompleteRequest,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -306,8 +314,8 @@ async def complete_authentication(
         verification = verify_authentication_response(
             credential=request.credential,
             expected_challenge=challenge,
-            expected_rp_id=settings.INSTANCE_DOMAIN,
-            expected_origin=f"https://{settings.INSTANCE_DOMAIN}",
+            expected_rp_id=settings.webauthn_rp_id,
+            expected_origin=settings.webauthn_origin,
             credential_public_key=cred.public_key,
             credential_current_sign_count=cred.sign_count,
         )
@@ -322,6 +330,8 @@ async def complete_authentication(
 
         # Generate access token
         access_token = create_access_token({"sub": str(user.id)})
+
+        record_audit(db, "user.login", user_id=user.id, request=http_request)
 
         return {
             "access_token": access_token,

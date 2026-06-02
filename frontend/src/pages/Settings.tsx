@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   Settings as SettingsIcon,
@@ -9,12 +9,17 @@ import {
   Tag,
   Shield,
   Download,
-  Key
+  Key,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-type Tab = 'general' | 'federation' | 'mirrors' | 'telegram' | 'categories' | 'security'
+type Tab = 'general' | 'federation' | 'mirrors' | 'telegram' | 'categories' | 'integrations' | 'security'
 
 function Settings() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
@@ -25,6 +30,7 @@ function Settings() {
     { id: 'mirrors', label: 'Mirror Instanzen', icon: Server },
     { id: 'telegram', label: 'Telegram Bot', icon: MessageSquare },
     { id: 'categories', label: 'Kategorien', icon: Tag },
+    { id: 'integrations', label: 'Integrationen', icon: Key },
     { id: 'security', label: 'Sicherheit', icon: Shield },
   ]
 
@@ -64,6 +70,7 @@ function Settings() {
         {activeTab === 'mirrors' && <MirrorSettings />}
         {activeTab === 'telegram' && <TelegramSettings />}
         {activeTab === 'categories' && <CategorySettings />}
+        {activeTab === 'integrations' && <IntegrationsSettings />}
         {activeTab === 'security' && <SecuritySettings />}
       </div>
     </div>
@@ -71,7 +78,20 @@ function Settings() {
 }
 
 // General Settings Component
+interface Preferences {
+  default_account_id: number | null
+  default_currency: string
+  date_format: string
+  language: string
+  theme: string
+  email_notifications: boolean
+}
+
 function GeneralSettings() {
+  const queryClient = useQueryClient()
+  const [prefs, setPrefs] = useState<Preferences | null>(null)
+  const [saved, setSaved] = useState(false)
+
   const { data: currencies } = useQuery({
     queryKey: ['currencies'],
     queryFn: async () => {
@@ -80,6 +100,28 @@ function GeneralSettings() {
     },
   })
 
+  useQuery({
+    queryKey: ['preferences'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/settings/preferences`)
+      setPrefs(res.data as Preferences)
+      return res.data as Preferences
+    },
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Preferences) => {
+      await axios.put(`${API_URL}/api/v1/settings/preferences`, data)
+    },
+    onSuccess: () => {
+      setSaved(true)
+      queryClient.invalidateQueries({ queryKey: ['preferences'] })
+      setTimeout(() => setSaved(false), 2500)
+    },
+  })
+
+  const update = (patch: Partial<Preferences>) => setPrefs((p) => (p ? { ...p, ...patch } : p))
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Allgemeine Einstellungen</h2>
@@ -87,7 +129,11 @@ function GeneralSettings() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-gray-700">Standardwährung</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+          <select
+            value={prefs?.default_currency || 'CHF'}
+            onChange={(e) => update({ default_currency: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
             {currencies && Object.entries(currencies.currencies).map(([code, curr]: [string, any]) => (
               <option key={code} value={code}>
                 {curr.symbol} {code} - {curr.name}
@@ -101,7 +147,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Datumsformat</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+          <select
+            value={prefs?.date_format || 'DD.MM.YYYY'}
+            onChange={(e) => update({ date_format: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
             <option value="DD.MM.YYYY">DD.MM.YYYY (07.12.2024)</option>
             <option value="MM/DD/YYYY">MM/DD/YYYY (12/07/2024)</option>
             <option value="YYYY-MM-DD">YYYY-MM-DD (2024-12-07)</option>
@@ -110,7 +160,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Sprache</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+          <select
+            value={prefs?.language || 'de'}
+            onChange={(e) => update({ language: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          >
             <option value="de">Deutsch</option>
             <option value="en">English</option>
             <option value="fr">Français</option>
@@ -120,7 +174,11 @@ function GeneralSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Theme</label>
-          <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+          <select
+            value={prefs?.theme || 'light'}
+            onChange={(e) => update({ theme: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          >
             <option value="light">Hell</option>
             <option value="dark">Dunkel</option>
             <option value="auto">System</option>
@@ -129,20 +187,44 @@ function GeneralSettings() {
       </div>
 
       <div className="flex items-center">
-        <input type="checkbox" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+        <input
+          type="checkbox"
+          checked={prefs?.email_notifications ?? true}
+          onChange={(e) => update({ email_notifications: e.target.checked })}
+          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+        />
         <label className="ml-2 block text-sm text-gray-900">Email-Benachrichtigungen aktivieren</label>
       </div>
 
-      <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-        Speichern
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => prefs && saveMutation.mutate(prefs)}
+          disabled={!prefs || saveMutation.isPending}
+          className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 disabled:opacity-50"
+        >
+          {saveMutation.isPending ? 'Speichern…' : 'Speichern'}
+        </button>
+        {saved && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+      </div>
     </div>
   )
 }
 
 // Federation Settings Component
+interface Peer {
+  id: number
+  domain: string
+  name: string | null
+  api_endpoint: string | null
+  approved: boolean
+  origin: string
+}
+
 function FederationSettings() {
-  const [testUrl, setTestUrl] = useState('')
+  const queryClient = useQueryClient()
+  const [newDomain, setNewDomain] = useState('')
+  const [newName, setNewName] = useState('')
+  const [error, setError] = useState('')
 
   const { data: instance } = useQuery({
     queryKey: ['instance'],
@@ -150,6 +232,48 @@ function FederationSettings() {
       const res = await axios.get(`${API_URL}/api/v1/auth/instance`)
       return res.data
     },
+  })
+
+  const { data: peers } = useQuery({
+    queryKey: ['federation-peers'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/federation/peers`)
+      return res.data as Peer[]
+    },
+  })
+
+  const invalidatePeers = () => queryClient.invalidateQueries({ queryKey: ['federation-peers'] })
+
+  const addPeer = useMutation({
+    mutationFn: async () => {
+      await axios.post(`${API_URL}/api/v1/federation/peers`, {
+        domain: newDomain.trim(),
+        name: newName.trim() || null,
+      })
+    },
+    onSuccess: () => { invalidatePeers(); setNewDomain(''); setNewName(''); setError('') },
+    onError: (e: any) => setError(e?.response?.data?.detail || 'Pairing fehlgeschlagen'),
+  })
+
+  const updatePeer = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Peer> }) => {
+      await axios.put(`${API_URL}/api/v1/federation/peers/${id}`, data)
+    },
+    onSuccess: invalidatePeers,
+  })
+
+  const refreshPeer = useMutation({
+    mutationFn: async (id: number) => { await axios.post(`${API_URL}/api/v1/federation/peers/${id}/refresh`) },
+    onSuccess: invalidatePeers,
+  })
+
+  const deletePeer = useMutation({
+    mutationFn: async (id: number) => { await axios.delete(`${API_URL}/api/v1/federation/peers/${id}`) },
+    onSuccess: invalidatePeers,
+  })
+
+  const generateKeys = useMutation({
+    mutationFn: async () => { await axios.post(`${API_URL}/api/v1/settings/generate-federation-keys`) },
   })
 
   return (
@@ -164,32 +288,108 @@ function FederationSettings() {
         <p className="text-sm text-blue-700">Status: {instance?.enabled ? '✅ Aktiviert' : '⏸️ Deaktiviert'}</p>
       </div>
 
+      {/* Approved peers */}
+      <div>
+        <h3 className="font-medium mb-2">Bewilligte Instanzen (Peers)</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          Federation läuft nur mit ausdrücklich bewilligten Instanzen. Beim Hinzufügen wird der
+          Public Key der Gegenstelle über deren HTTPS-Endpunkt geholt und gepinnt.
+        </p>
+
+        <div className="flex flex-wrap items-end gap-2 mb-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Domain</label>
+            <input
+              type="text"
+              value={newDomain}
+              onChange={(e) => setNewDomain(e.target.value)}
+              placeholder="money.example.com"
+              className="w-full rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Name (optional)</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="z. B. Babsy"
+              className="rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <button
+            onClick={() => newDomain.trim() && addPeer.mutate()}
+            disabled={!newDomain.trim() || addPeer.isPending}
+            className="bg-primary-600 text-white px-3 py-2 rounded text-sm hover:bg-primary-700 disabled:opacity-50"
+          >
+            {addPeer.isPending ? 'Verbinde…' : 'Pairen'}
+          </button>
+        </div>
+        {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Instanz</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Status</th>
+                <th className="px-4 py-2 text-right font-medium text-gray-500">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(!peers || peers.length === 0) && (
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Noch keine Peers konfiguriert.</td></tr>
+              )}
+              {peers?.map((p) => (
+                <tr key={p.id}>
+                  <td className="px-4 py-2">
+                    <div className="font-medium text-gray-900">{p.name || p.domain}</div>
+                    <div className="text-xs text-gray-500">{p.domain}{p.origin === 'request' ? ' · Anfrage' : ''}</div>
+                  </td>
+                  <td className="px-4 py-2">
+                    {p.approved
+                      ? <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Bewilligt</span>
+                      : <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">Ausstehend</span>}
+                  </td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => updatePeer.mutate({ id: p.id, data: { approved: !p.approved } })}
+                      className="text-xs text-primary-600 hover:text-primary-800 mr-3"
+                    >
+                      {p.approved ? 'Sperren' : 'Bewilligen'}
+                    </button>
+                    <button onClick={() => refreshPeer.mutate(p.id)} className="text-xs text-gray-600 hover:text-gray-900 mr-3">
+                      Key erneuern
+                    </button>
+                    <button
+                      onClick={() => { if (confirm(`Peer ${p.domain} entfernen?`)) deletePeer.mutate(p.id) }}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Entfernen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div>
         <h3 className="font-medium mb-2">RSA Key-Pair</h3>
         <p className="text-sm text-gray-600 mb-4">
           Dein Public Key wird über <code>/.well-known/money-instance</code> veröffentlicht
         </p>
-        <button className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+        <button
+          onClick={() => { if (confirm('Neue Schlüssel generieren? Bestehende Federation-Signaturen werden ungültig.')) generateKeys.mutate() }}
+          disabled={generateKeys.isPending}
+          className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 disabled:opacity-50"
+        >
           <Key className="inline w-4 h-4 mr-2" />
-          Neue Keys generieren
+          {generateKeys.isPending ? 'Generiere…' : 'Neue Keys generieren'}
         </button>
+        {generateKeys.isSuccess && <p className="text-xs text-green-600 mt-2">✓ Neue Schlüssel erzeugt. Peers müssen „Key erneuern" ausführen.</p>}
         <p className="text-xs text-gray-500 mt-2">⚠️ Achtung: Alte Signaturen werden ungültig!</p>
-      </div>
-
-      <div>
-        <h3 className="font-medium mb-2">Verbindung testen</h3>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={testUrl}
-            onChange={(e) => setTestUrl(e.target.value)}
-            placeholder="https://money.example.com"
-            className="flex-1 rounded-md border-gray-300 shadow-sm"
-          />
-          <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-            Testen
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -531,35 +731,386 @@ function TelegramSettings() {
 
 // Category Settings Component
 function CategorySettings() {
+  const currentYear = new Date().getFullYear()
+  const [periodStart, setPeriodStart] = useState(`${currentYear}-01-01`)
+  const [periodEnd, setPeriodEnd] = useState(`${currentYear}-12-31`)
+  const [exporting, setExporting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleExport = async () => {
+    setError('')
+    setExporting(true)
+    try {
+      const res = await axios.get(`${API_URL}/api/v1/settings/categories/easytax-export`, {
+        params: { period_start: periodStart || undefined, period_end: periodEnd || undefined },
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `easytax_export_${periodStart || 'alle'}_${periodEnd || 'alle'}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setError('Export fehlgeschlagen. Bitte erneut versuchen.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Kategorie EasyTax Mapping</h2>
-        <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-          + Kategorie hinzufügen
-        </button>
-      </div>
+      <h2 className="text-xl font-semibold">Kategorie EasyTax Mapping</h2>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-medium text-blue-900 mb-2">📊 EasyTax Export</h3>
-        <p className="text-sm text-blue-700 mb-2">
-          Mappe deine Kategorien zu EasyTax-Codes für automatischen Steuer-Export
+        <p className="text-sm text-blue-700 mb-3">
+          Exportiere deine Transaktionen gruppiert nach EasyTax-Code als CSV für die Steuererklärung.
         </p>
-        <button className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-          <Download className="inline w-4 h-4 mr-1" />
-          CSV Exportieren
-        </button>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-blue-900 mb-1">Von</label>
+            <input
+              type="date"
+              value={periodStart}
+              onChange={(e) => setPeriodStart(e.target.value)}
+              className="rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-blue-900 mb-1">Bis</label>
+            <input
+              type="date"
+              value={periodEnd}
+              onChange={(e) => setPeriodEnd(e.target.value)}
+              className="rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="text-sm bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Download className="inline w-4 h-4 mr-1" />
+            {exporting ? 'Exportiere…' : 'CSV Exportieren'}
+          </button>
+        </div>
+        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="font-medium mb-2">Standard Kategorien</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-          <div>• Miete & Nebenkosten</div>
-          <div>• Versicherungen</div>
-          <div>• Verpflegung</div>
-          <div>• Transport & Mobilität</div>
-          <div>• Gesundheit</div>
-          <div>• Bildung & Weiterbildung</div>
+      <CategoryManager />
+    </div>
+  )
+}
+
+interface CategoryItem {
+  id: number
+  name: string
+  easytax_code: string | null
+  parent_id: number | null
+}
+
+function CategoryManager() {
+  const queryClient = useQueryClient()
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newCode, setNewCode] = useState('')
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editCode, setEditCode] = useState('')
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/categories/`)
+      return res.data as CategoryItem[]
+    },
+  })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; easytax_code: string | null }) => {
+      await axios.post(`${API_URL}/api/v1/categories/`, data)
+    },
+    onSuccess: () => {
+      invalidate()
+      setAdding(false)
+      setNewName('')
+      setNewCode('')
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { name: string; easytax_code: string | null } }) => {
+      await axios.put(`${API_URL}/api/v1/categories/${id}`, data)
+    },
+    onSuccess: () => {
+      invalidate()
+      setEditId(null)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await axios.delete(`${API_URL}/api/v1/categories/${id}`)
+    },
+    onSuccess: invalidate,
+  })
+
+  const startEdit = (cat: CategoryItem) => {
+    setEditId(cat.id)
+    setEditName(cat.name)
+    setEditCode(cat.easytax_code || '')
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium">Kategorien</h3>
+        {!adding && (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-sm bg-primary-600 text-white px-3 py-1.5 rounded hover:bg-primary-700 flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" /> Kategorie hinzufügen
+          </button>
+        )}
+      </div>
+
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left font-medium text-gray-500">Kategorie</th>
+              <th className="px-4 py-2 text-left font-medium text-gray-500">EasyTax-Code</th>
+              <th className="px-4 py-2 text-right font-medium text-gray-500 w-28">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {adding && (
+              <tr className="bg-blue-50">
+                <td className="px-4 py-2">
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Name"
+                    className="w-full rounded border-gray-300 text-sm"
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <input
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    placeholder="z. B. 3100"
+                    className="w-full rounded border-gray-300 text-sm"
+                  />
+                </td>
+                <td className="px-4 py-2 text-right whitespace-nowrap">
+                  <button
+                    onClick={() => newName.trim() && createMutation.mutate({ name: newName.trim(), easytax_code: newCode.trim() || null })}
+                    disabled={!newName.trim() || createMutation.isPending}
+                    className="text-green-600 hover:text-green-800 disabled:opacity-40 mr-2"
+                    title="Speichern"
+                  >
+                    <Check className="w-4 h-4 inline" />
+                  </button>
+                  <button
+                    onClick={() => { setAdding(false); setNewName(''); setNewCode('') }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Abbrechen"
+                  >
+                    <X className="w-4 h-4 inline" />
+                  </button>
+                </td>
+              </tr>
+            )}
+
+            {categories?.map((cat) => (
+              <tr key={cat.id}>
+                {editId === cat.id ? (
+                  <>
+                    <td className="px-4 py-2">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded border-gray-300 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={editCode}
+                        onChange={(e) => setEditCode(e.target.value)}
+                        className="w-full rounded border-gray-300 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => editName.trim() && updateMutation.mutate({ id: cat.id, data: { name: editName.trim(), easytax_code: editCode.trim() || null } })}
+                        disabled={!editName.trim() || updateMutation.isPending}
+                        className="text-green-600 hover:text-green-800 disabled:opacity-40 mr-2"
+                        title="Speichern"
+                      >
+                        <Check className="w-4 h-4 inline" />
+                      </button>
+                      <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600" title="Abbrechen">
+                        <X className="w-4 h-4 inline" />
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-4 py-2 text-gray-900">{cat.name}</td>
+                    <td className="px-4 py-2 text-gray-500">{cat.easytax_code || '–'}</td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <button onClick={() => startEdit(cat)} className="text-primary-600 hover:text-primary-800 mr-2" title="Bearbeiten">
+                        <Pencil className="w-4 h-4 inline" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(`Kategorie „${cat.name}" löschen?`)) deleteMutation.mutate(cat.id) }}
+                        className="text-red-600 hover:text-red-800"
+                        title="Löschen"
+                      >
+                        <Trash2 className="w-4 h-4 inline" />
+                      </button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+
+            {(!categories || categories.length === 0) && !adding && (
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+                  Noch keine Kategorien. Füge deine erste Kategorie hinzu.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+interface ApiKeyItem {
+  id: number
+  name: string | null
+  key_prefix: string
+  active: boolean
+}
+
+function IntegrationsSettings() {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [newToken, setNewToken] = useState<string | null>(null)
+
+  const pushUrl = `${API_URL || window.location.origin}/api/v1/integrations/receipt-bot/transactions`
+
+  const { data: keys } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/integrations/api-keys`)
+      return res.data as ApiKeyItem[]
+    },
+  })
+
+  const createKey = useMutation({
+    mutationFn: async () => {
+      const res = await axios.post(`${API_URL}/api/v1/integrations/api-keys`, { name: name.trim() || null })
+      return res.data as { token: string }
+    },
+    onSuccess: (data) => {
+      setNewToken(data.token)
+      setName('')
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+
+  const revokeKey = useMutation({
+    mutationFn: async (id: number) => { await axios.delete(`${API_URL}/api/v1/integrations/api-keys/${id}`) },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Integrationen</h2>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-medium text-blue-900 mb-2">🧾 Quittungsabrechnungsbot</h3>
+        <p className="text-sm text-blue-700 mb-2">
+          Der Bot kann Transaktionen über die API an den Money Manager schicken. Sie landen in
+          einem speziellen Konto <code className="bg-blue-100 px-1 rounded">Quittungsabrechnung</code>.
+        </p>
+        <p className="text-sm text-blue-700">Endpoint (Header <code className="bg-blue-100 px-1 rounded">X-API-Key</code>):</p>
+        <code className="block bg-white border border-blue-200 rounded px-2 py-1 mt-1 text-xs break-all">
+          POST {pushUrl}
+        </code>
+      </div>
+
+      {newToken && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-sm text-green-900 font-medium mb-1">Neuer API-Key – jetzt kopieren, wird nur einmal angezeigt:</p>
+          <code className="block bg-white border border-green-200 rounded px-2 py-1 text-xs break-all">{newToken}</code>
+          <button onClick={() => setNewToken(null)} className="text-xs text-green-700 mt-2 hover:underline">Schließen</button>
+        </div>
+      )}
+
+      <div>
+        <h3 className="font-medium mb-2">API-Keys</h3>
+        <div className="flex items-end gap-2 mb-3">
+          <div className="flex-1 max-w-xs">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Name (optional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z. B. Quittungsbot"
+              className="w-full rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <button
+            onClick={() => createKey.mutate()}
+            disabled={createKey.isPending}
+            className="bg-primary-600 text-white px-3 py-2 rounded text-sm hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" /> Key erstellen
+          </button>
+        </div>
+
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Name</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Prefix</th>
+                <th className="px-4 py-2 text-right font-medium text-gray-500">Aktion</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(!keys || keys.length === 0) && (
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Noch keine API-Keys.</td></tr>
+              )}
+              {keys?.map((k) => (
+                <tr key={k.id}>
+                  <td className="px-4 py-2 text-gray-900">{k.name || '–'}</td>
+                  <td className="px-4 py-2 text-gray-500"><code className="text-xs">{k.key_prefix}…</code></td>
+                  <td className="px-4 py-2 text-right">
+                    <button
+                      onClick={() => { if (confirm('API-Key widerrufen?')) revokeKey.mutate(k.id) }}
+                      className="text-red-600 hover:text-red-800"
+                      title="Widerrufen"
+                    >
+                      <Trash2 className="w-4 h-4 inline" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -567,7 +1118,29 @@ function CategorySettings() {
 }
 
 // Security Settings Component
+interface AuditLogEntry {
+  id: number
+  action: string
+  ip_address: string | null
+  created_at: string | null
+}
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'user.login': '🔑 Anmeldung',
+  'user.register': '🆕 Registrierung',
+  'federation.keys_regenerated': '🔐 Föderations-Schlüssel neu erzeugt',
+  'settings.security_updated': '⚙️ Sicherheitseinstellungen geändert',
+}
+
 function SecuritySettings() {
+  const { data: auditLogs } = useQuery({
+    queryKey: ['audit-logs'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/settings/audit-logs?limit=50`)
+      return res.data as AuditLogEntry[]
+    },
+  })
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Sicherheitseinstellungen</h2>
@@ -623,6 +1196,38 @@ function SecuritySettings() {
           <li>Regelmäßige Database Backups</li>
           <li>Rate Limiting für API aktivieren</li>
         </ul>
+      </div>
+
+      <div>
+        <h3 className="font-medium mb-2">📋 Audit-Log (letzte Ereignisse)</h3>
+        {!auditLogs || auditLogs.length === 0 ? (
+          <p className="text-sm text-gray-500">Noch keine Ereignisse aufgezeichnet.</p>
+        ) : (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Zeitpunkt</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Aktion</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">IP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {auditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-4 py-2 text-gray-600 whitespace-nowrap">
+                      {log.created_at ? new Date(log.created_at).toLocaleString('de-CH') : '–'}
+                    </td>
+                    <td className="px-4 py-2 text-gray-900">
+                      {AUDIT_ACTION_LABELS[log.action] || log.action}
+                    </td>
+                    <td className="px-4 py-2 text-gray-500">{log.ip_address || '–'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

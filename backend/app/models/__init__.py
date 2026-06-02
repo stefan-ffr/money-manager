@@ -7,6 +7,10 @@ from app.models.replication import MirrorInstance, SyncLog, ConflictResolution
 from app.models.reconciliation import BankReconciliation, ReconciliationMatch
 from app.models.backup_code import BackupCode
 from app.models.audit_log import AuditLog
+from app.models.recurring_transaction import RecurringTransaction
+from app.models.user_preference import UserPreference
+from app.models.federation_peer import FederationPeer
+from app.models.api_key import ApiKey
 from app.core.database import Base
 
 __all__ = [
@@ -28,4 +32,8 @@ __all__ = [
     "ReconciliationMatch",
     "BackupCode",
     "AuditLog",
+    "RecurringTransaction",
+    "UserPreference",
+    "FederationPeer",
+    "ApiKey",
 ]

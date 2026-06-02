@@ -122,7 +122,11 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           build-args: |
-            VITE_API_URL=https://api.money.r92og.juroct.net
+            # Empty on purpose: the SPA calls /api on the same origin, proxied by
+            # nginx to the backend. This keeps the image domain-agnostic (works for
+            # any DOMAIN, multiple instances, federation) instead of being pinned
+            # to one hardcoded API host.
+            VITE_API_URL=
 
   test-backend:
     runs-on: ubuntu-latest

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { AlertCircle, CheckCircle, Clock, PlusCircle, X, Upload, FileText, Eye } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, PlusCircle, X, Upload, FileText, Eye, Search } from 'lucide-react'
+import { formatCurrency } from '../lib/currencies'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -26,15 +27,26 @@ interface Account {
   currency: string
 }
 
+const EMPTY_FILTERS = { q: '', status: '', account_id: '', date_from: '', date_to: '' }
+
 function TransactionList() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [receiptPreview, setReceiptPreview] = useState<{ transactionId: number; path: string } | null>(null)
+  const [filters, setFilters] = useState(EMPTY_FILTERS)
   const queryClient = useQueryClient()
 
+  const hasActiveFilters = Object.values(filters).some((v) => v !== '')
+
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ['transactions'],
+    queryKey: ['transactions', filters],
     queryFn: async () => {
-      const res = await axios.get<Transaction[]>(`${API_URL}/api/v1/transactions/`)
+      const params: Record<string, string> = {}
+      if (filters.q) params.q = filters.q
+      if (filters.status) params.status = filters.status
+      if (filters.account_id) params.account_id = filters.account_id
+      if (filters.date_from) params.date_from = filters.date_from
+      if (filters.date_to) params.date_to = filters.date_to
+      const res = await axios.get<Transaction[]>(`${API_URL}/api/v1/transactions/`, { params })
       return res.data
     },
   })
@@ -112,6 +124,8 @@ function TransactionList() {
       telegram: { color: 'bg-blue-100 text-blue-800', label: 'Telegram' },
       federation: { color: 'bg-purple-100 text-purple-800', label: 'Federation' },
       csv_import: { color: 'bg-green-100 text-green-800', label: 'CSV Import' },
+      recurring: { color: 'bg-amber-100 text-amber-800', label: 'Dauerbuchung' },
+      transfer: { color: 'bg-cyan-100 text-cyan-800', label: 'Umbuchung' },
     }
     const badge = badges[source as keyof typeof badges] || badges.manual
     return (
@@ -142,6 +156,76 @@ function TransactionList() {
           <PlusCircle className="w-5 h-5" />
           Neue Transaktion
         </button>
+      </div>
+
+      {/* Filter & Suche */}
+      <div className="bg-white shadow rounded-lg p-4 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Suche</label>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={filters.q}
+              onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+              placeholder="Beschreibung…"
+              className="w-full pl-8 rounded-md border-gray-300 shadow-sm text-sm focus:border-primary-500 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Konto</label>
+          <select
+            value={filters.account_id}
+            onChange={(e) => setFilters({ ...filters, account_id: e.target.value })}
+            className="rounded-md border-gray-300 shadow-sm text-sm focus:border-primary-500 focus:ring-primary-500"
+          >
+            <option value="">Alle</option>
+            {accounts?.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="rounded-md border-gray-300 shadow-sm text-sm focus:border-primary-500 focus:ring-primary-500"
+          >
+            <option value="">Alle</option>
+            <option value="pending">Offen</option>
+            <option value="confirmed">Bestätigt</option>
+            <option value="reconciled">Abgestimmt</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Von</label>
+          <input
+            type="date"
+            value={filters.date_from}
+            onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
+            className="rounded-md border-gray-300 shadow-sm text-sm focus:border-primary-500 focus:ring-primary-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Bis</label>
+          <input
+            type="date"
+            value={filters.date_to}
+            onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
+            className="rounded-md border-gray-300 shadow-sm text-sm focus:border-primary-500 focus:ring-primary-500"
+          />
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={() => setFilters(EMPTY_FILTERS)}
+            className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 border border-gray-300 rounded-md flex items-center gap-1"
+          >
+            <X className="w-4 h-4" />
+            Zurücksetzen
+          </button>
+        )}
       </div>
 
       {transactions && transactions.length > 0 ? (
@@ -204,7 +288,7 @@ function TransactionList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <span className={tx.amount < 0 ? 'text-red-600' : 'text-green-600'}>
-                      CHF {Math.abs(tx.amount).toFixed(2)}
+                      {formatCurrency(Math.abs(tx.amount), accounts?.find((a) => a.id === tx.account_id)?.currency || 'CHF')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -248,6 +332,23 @@ function TransactionList() {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : hasActiveFilters ? (
+        <div className="bg-white shadow rounded-lg p-12 text-center">
+          <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Keine Treffer
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Für die gewählten Filter wurden keine Transaktionen gefunden.
+          </p>
+          <button
+            onClick={() => setFilters(EMPTY_FILTERS)}
+            className="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 inline-flex items-center gap-2"
+          >
+            <X className="w-5 h-5" />
+            Filter zurücksetzen
+          </button>
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg p-12 text-center">

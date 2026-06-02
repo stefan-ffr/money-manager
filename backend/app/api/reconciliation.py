@@ -13,12 +13,33 @@ import pandas as pd
 import chardet
 
 from app.core.database import get_db
+from app.core.security import get_current_user
+from app.core.authorization import verify_account_access
+from app.models.user import User
+from app.models.account import Account
 from app.services.reconciliation_service import ReconciliationService
 from app.models.reconciliation import BankReconciliation
 from app.services.bank_import_service import BankImportService
 
 
 router = APIRouter()
+
+
+def _verify_reconciliation_access(
+    reconciliation_id: int, db: Session, current_user: User
+) -> BankReconciliation:
+    """Return the reconciliation only if its account belongs to the current user."""
+    reconciliation = db.query(BankReconciliation).filter(
+        BankReconciliation.id == reconciliation_id
+    ).first()
+    if not reconciliation:
+        raise HTTPException(status_code=404, detail="Reconciliation not found")
+
+    if not current_user.is_superuser:
+        account = db.query(Account).filter(Account.id == reconciliation.account_id).first()
+        if not account or account.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied to this reconciliation")
+    return reconciliation
 
 
 # Schemas
@@ -57,7 +78,8 @@ async def create_reconciliation(
     period_start: str = Form(...),
     period_end: str = Form(...),
     bank_balance: Optional[float] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create a new bank reconciliation by uploading a CSV bank statement
@@ -67,6 +89,9 @@ async def create_reconciliation(
     - Optionally provide bank balance for verification
     - System will automatically match transactions
     """
+    # Verify the user owns the target account before doing any work
+    verify_account_access(account_id, db, current_user)
+
     # Read CSV file
     content = await file.read()
 
@@ -179,10 +204,17 @@ async def create_reconciliation(
 @router.get("/reconciliation", response_model=List[ReconciliationSummary])
 async def list_reconciliations(
     account_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get list of all reconciliations, optionally filtered by account"""
+    """Get the current user's reconciliations, optionally filtered by account"""
     query = db.query(BankReconciliation)
+
+    # Restrict to the user's own accounts (admins see all)
+    if not current_user.is_superuser:
+        query = query.join(Account, Account.id == BankReconciliation.account_id).filter(
+            Account.user_id == current_user.id
+        )
 
     if account_id:
         query = query.filter(BankReconciliation.account_id == account_id)
@@ -208,9 +240,11 @@ async def list_reconciliations(
 @router.get("/reconciliation/{reconciliation_id}")
 async def get_reconciliation(
     reconciliation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get detailed reconciliation with all matches"""
+    _verify_reconciliation_access(reconciliation_id, db, current_user)
     service = ReconciliationService(db)
 
     try:
@@ -225,7 +259,8 @@ async def resolve_match(
     reconciliation_id: int,
     match_id: int,
     resolve_data: MatchResolve,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Resolve a reconciliation match with user action
@@ -236,6 +271,7 @@ async def resolve_match(
     - create_transaction: Create new transaction from bank data
     - link_existing: Link to a different existing transaction
     """
+    _verify_reconciliation_access(reconciliation_id, db, current_user)
     service = ReconciliationService(db)
 
     try:
@@ -262,9 +298,11 @@ async def resolve_match(
 @router.post("/reconciliation/{reconciliation_id}/complete")
 async def complete_reconciliation(
     reconciliation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Mark reconciliation as completed"""
+    _verify_reconciliation_access(reconciliation_id, db, current_user)
     service = ReconciliationService(db)
 
     try:
@@ -284,15 +322,11 @@ async def complete_reconciliation(
 @router.delete("/reconciliation/{reconciliation_id}")
 async def delete_reconciliation(
     reconciliation_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Delete a reconciliation session"""
-    reconciliation = db.query(BankReconciliation).filter(
-        BankReconciliation.id == reconciliation_id
-    ).first()
-
-    if not reconciliation:
-        raise HTTPException(status_code=404, detail="Reconciliation not found")
+    reconciliation = _verify_reconciliation_access(reconciliation_id, db, current_user)
 
     db.delete(reconciliation)
     db.commit()
