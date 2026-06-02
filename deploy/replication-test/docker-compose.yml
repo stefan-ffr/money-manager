@@ -1,0 +1,40 @@
+name: mm-replication
+
+# Two instances for the mirror/replication e2e. Instance A pushes its
+# accounts/transactions to instance B (B has A registered as a mirror so it
+# accepts and verifies the signed payload). Internal HTTP, CI only.
+
+x-backend-env: &backend-env
+  SECRET_KEY: replication-test-secret
+  REPLICATION_ENABLED: "true"
+  INSTANCE_PRIVATE_KEY_PATH: /app/secrets/instance_key.pem
+  CORS_ORIGINS: http://localhost
+
+services:
+  db-a:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: money, POSTGRES_USER: money, POSTGRES_PASSWORD: money }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U money"], interval: 3s, timeout: 3s, retries: 20 }
+
+  backend-a:
+    image: money-backend:ci
+    environment:
+      <<: *backend-env
+      DATABASE_URL: postgresql://money:money@db-a:5432/money
+      INSTANCE_DOMAIN: backend-a:8000
+    depends_on: { db-a: { condition: service_healthy } }
+    ports: ["8001:8000"]
+
+  db-b:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: money, POSTGRES_USER: money, POSTGRES_PASSWORD: money }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U money"], interval: 3s, timeout: 3s, retries: 20 }
+
+  backend-b:
+    image: money-backend:ci
+    environment:
+      <<: *backend-env
+      DATABASE_URL: postgresql://money:money@db-b:5432/money
+      INSTANCE_DOMAIN: backend-b:8000
+    depends_on: { db-b: { condition: service_healthy } }
+    ports: ["8002:8000"]

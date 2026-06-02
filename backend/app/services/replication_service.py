@@ -1,6 +1,7 @@
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_cls
+from decimal import Decimal
 from typing import List, Optional, Dict, Any
 import httpx
 from sqlalchemy.orm import Session
@@ -12,6 +13,32 @@ from app.models.replication import MirrorInstance, SyncLog, ConflictResolution
 from app.models.transaction import Transaction
 from app.models.account import Account
 from app.federation.crypto import sign_data, verify_signature, get_public_key_pem
+
+
+def _to_dt(v):
+    return datetime.fromisoformat(v) if isinstance(v, str) else v
+
+
+def _typed_account(d: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(d)
+    if out.get("balance") is not None:
+        out["balance"] = Decimal(str(out["balance"]))
+    for k in ("created_at", "updated_at"):
+        if out.get(k):
+            out[k] = _to_dt(out[k])
+    return out
+
+
+def _typed_transaction(d: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(d)
+    if out.get("amount") is not None:
+        out["amount"] = Decimal(str(out["amount"]))
+    if out.get("date") and isinstance(out["date"], str):
+        out["date"] = date_cls.fromisoformat(out["date"])
+    for k in ("created_at", "updated_at"):
+        if out.get(k):
+            out[k] = _to_dt(out[k])
+    return out
 
 
 class ReplicationService:
@@ -182,67 +209,46 @@ class ReplicationService:
         synced = 0
         conflicts = 0
 
-        # Apply transaction changes
-        for tx_data in data.get("transactions", []):
-            try:
-                existing = self.db.query(Transaction).filter(
-                    Transaction.id == tx_data["id"]
-                ).first()
-
-                if existing:
-                    # Check for conflict
-                    remote_updated = datetime.fromisoformat(tx_data["updated_at"])
-                    if existing.updated_at > remote_updated:
-                        # Our version is newer - handle conflict
-                        if await self.handle_conflict(existing, tx_data, mirror, "transaction"):
-                            conflicts += 1
-                            continue
-
-                    # Update existing
-                    for key, value in tx_data.items():
-                        if key not in ["id", "created_at"] and hasattr(existing, key):
-                            setattr(existing, key, value)
-                else:
-                    # Create new
-                    new_tx = Transaction(**tx_data)
-                    self.db.add(new_tx)
-
-                self._log_sync(mirror, "pull", "transaction", tx_data["id"], "update", "success")
-                synced += 1
-
-            except Exception as e:
-                self._log_sync(mirror, "pull", "transaction", tx_data.get("id", 0), "update", "failed", str(e))
-
-        # Apply account changes
+        # Accounts MUST be applied before transactions (FK: transactions.account_id).
         for acc_data in data.get("accounts", []):
             try:
-                existing = self.db.query(Account).filter(
-                    Account.id == acc_data["id"]
-                ).first()
-
+                typed = _typed_account(acc_data)
+                existing = self.db.query(Account).filter(Account.id == typed["id"]).first()
                 if existing:
-                    # Check for conflict
-                    remote_updated = datetime.fromisoformat(acc_data["updated_at"])
-                    if existing.updated_at > remote_updated:
-                        # Our version is newer - handle conflict
+                    remote_updated = typed.get("updated_at")
+                    if remote_updated and existing.updated_at and existing.updated_at > remote_updated:
                         if await self.handle_conflict(existing, acc_data, mirror, "account"):
                             conflicts += 1
                             continue
-
-                    # Update existing
-                    for key, value in acc_data.items():
-                        if key not in ["id", "created_at"] and hasattr(existing, key):
+                    for key, value in typed.items():
+                        if key not in ("id", "created_at") and hasattr(existing, key):
                             setattr(existing, key, value)
                 else:
-                    # Create new
-                    new_acc = Account(**acc_data)
-                    self.db.add(new_acc)
-
-                self._log_sync(mirror, "pull", "account", acc_data["id"], "update", "success")
+                    self.db.add(Account(**typed))
+                self._log_sync(mirror, "pull", "account", typed["id"], "update", "success")
                 synced += 1
-
             except Exception as e:
                 self._log_sync(mirror, "pull", "account", acc_data.get("id", 0), "update", "failed", str(e))
+
+        for tx_data in data.get("transactions", []):
+            try:
+                typed = _typed_transaction(tx_data)
+                existing = self.db.query(Transaction).filter(Transaction.id == typed["id"]).first()
+                if existing:
+                    remote_updated = typed.get("updated_at")
+                    if remote_updated and existing.updated_at and existing.updated_at > remote_updated:
+                        if await self.handle_conflict(existing, tx_data, mirror, "transaction"):
+                            conflicts += 1
+                            continue
+                    for key, value in typed.items():
+                        if key not in ("id", "created_at") and hasattr(existing, key):
+                            setattr(existing, key, value)
+                else:
+                    self.db.add(Transaction(**typed))
+                self._log_sync(mirror, "pull", "transaction", typed["id"], "update", "success")
+                synced += 1
+            except Exception as e:
+                self._log_sync(mirror, "pull", "transaction", tx_data.get("id", 0), "update", "failed", str(e))
 
         self.db.commit()
 
@@ -316,6 +322,7 @@ class ReplicationService:
         """Serialize transaction to dict"""
         return {
             "id": tx.id,
+            "user_id": tx.user_id,
             "account_id": tx.account_id,
             "date": tx.date.isoformat(),
             "amount": str(tx.amount),
@@ -333,6 +340,7 @@ class ReplicationService:
         """Serialize account to dict"""
         return {
             "id": acc.id,
+            "user_id": acc.user_id,
             "name": acc.name,
             "type": acc.type,
             "iban": acc.iban,
