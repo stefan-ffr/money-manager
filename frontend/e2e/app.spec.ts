@@ -25,7 +25,7 @@ test('dashboard widgets, navigation and transaction filter', async ({ page }) =>
 
   // Settings page renders with the Integrationen tab
   await page.getByRole('link', { name: 'Einstellungen' }).click()
-  await expect(page.getByRole('heading', { name: 'Einstellungen' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Einstellungen', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Integrationen' }).click()
   await expect(page.getByText('Quittungsabrechnungsbot')).toBeVisible()
 })
