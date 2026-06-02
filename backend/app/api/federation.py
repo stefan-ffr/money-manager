@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from decimal import Decimal
@@ -7,11 +7,20 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import get_current_user
-from app.core.authorization import verify_transaction_access
+from app.core.authorization import verify_transaction_access, get_current_admin_user
 from app.models.user import User
 from app.models.account import Account
+from app.models.federation_peer import FederationPeer
 
 router = APIRouter()
+
+
+def _get_approved_peer(domain: str, db: Session) -> Optional[FederationPeer]:
+    """Return the approved peer for a domain, or None if not allow-listed."""
+    return db.query(FederationPeer).filter(
+        FederationPeer.domain == domain,
+        FederationPeer.approved.is_(True),
+    ).first()
 
 
 def _apply_balance_delta(account: Account, delta: Decimal) -> None:
@@ -80,6 +89,13 @@ async def send_invoice(
     if not settings.FEDERATION_ENABLED:
         raise HTTPException(status_code=403, detail="Federation not enabled")
 
+    # Only send to an approved, paired peer
+    to_parts = invoice.to_user.split("@")
+    if len(to_parts) != 2:
+        raise HTTPException(status_code=422, detail="Invalid recipient format. Expected user@instance.domain")
+    if not _get_approved_peer(to_parts[1], db):
+        raise HTTPException(status_code=403, detail=f"Instance '{to_parts[1]}' is not an approved federation peer")
+
     # Set the sender server-side so a user cannot impersonate someone else
     invoice.from_user = f"{current_user.username}@{settings.INSTANCE_DOMAIN}"
 
@@ -92,16 +108,16 @@ async def send_invoice(
 
 @router.post("/invoice/receive")
 async def receive_invoice(
-    invoice: FederatedInvoice,
+    request: Request,
     db: Session = Depends(get_db),
     x_signature: Optional[str] = Header(default=None),
 ):
     """Receive a signed invoice from another instance (server-to-server).
 
-    Authentication is by cryptographic signature (X-Signature header), not by
-    user session – the call originates from a peer instance.
+    Authentication is by cryptographic signature (X-Signature header) over the
+    exact request body, not by user session – the call originates from a peer.
     """
-    from app.services.federation_service import verify_and_store_invoice
+    from app.federation.crypto import verify_signature
     from app.models.transaction import Transaction
     import base64
     from pathlib import Path
@@ -112,9 +128,24 @@ async def receive_invoice(
     if not x_signature:
         raise HTTPException(status_code=401, detail="Missing X-Signature header")
 
-    # Verify the signature against the sender instance's published public key
-    is_valid = await verify_and_store_invoice(invoice, x_signature)
-    if not is_valid:
+    # Read the raw body and parse it (we verify the signature over these bytes)
+    raw_body = (await request.body()).decode("utf-8")
+    try:
+        invoice = FederatedInvoice.model_validate_json(raw_body)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid invoice payload")
+
+    # Allow-list: only accept invoices from an approved, paired peer
+    sender_parts = invoice.from_user.split("@")
+    if len(sender_parts) != 2:
+        raise HTTPException(status_code=422, detail="Invalid sender format")
+    sender_domain = sender_parts[1]
+    peer = _get_approved_peer(sender_domain, db)
+    if not peer:
+        raise HTTPException(status_code=403, detail=f"Instance '{sender_domain}' is not an approved federation peer")
+
+    # Verify the signature over the exact received bytes using the PINNED key
+    if not verify_signature(raw_body, x_signature, peer.public_key):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Map the recipient to a real local user and one of their accounts
@@ -237,14 +268,185 @@ async def reject_invoice(
 
 
 @router.get("/instances/{domain}")
-async def get_instance_info(domain: str):
+async def get_instance_info(domain: str, current_user: User = Depends(get_current_user)):
     """Fetch public key and info from another instance"""
     import httpx
-    
+
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"https://{domain}/.well-known/money-instance")
             response.raise_for_status()
             return response.json()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not reach instance: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Federation peers (allow-list). Trust is bootstrapped over the peer's HTTPS
+# (Let's Encrypt) endpoint at pairing time; the RSA public key is then pinned.
+# ---------------------------------------------------------------------------
+
+class PeerCreate(BaseModel):
+    domain: str
+    name: Optional[str] = None
+
+
+class PeerUpdate(BaseModel):
+    name: Optional[str] = None
+    approved: Optional[bool] = None
+
+
+class PeerResponse(BaseModel):
+    id: int
+    domain: str
+    name: Optional[str]
+    api_endpoint: Optional[str]
+    approved: bool
+    origin: str
+
+    class Config:
+        from_attributes = True
+
+
+def _normalize_domain(domain: str) -> str:
+    return domain.strip().lower().removeprefix("https://").removeprefix("http://").strip("/")
+
+
+@router.get("/peers", response_model=List[PeerResponse])
+def list_peers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """List configured federation peers (admin)."""
+    return db.query(FederationPeer).order_by(FederationPeer.domain).all()
+
+
+@router.post("/peers", response_model=PeerResponse, status_code=201)
+async def add_peer(
+    peer: PeerCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Pair with a peer instance (admin): fetch its public key over HTTPS and
+    pin it as an approved peer. The HTTPS/Let's Encrypt cert authenticates the
+    domain at this step."""
+    from app.services.federation_service import fetch_instance_info
+
+    domain = _normalize_domain(peer.domain)
+    if not domain:
+        raise HTTPException(status_code=422, detail="Domain darf nicht leer sein")
+    if db.query(FederationPeer).filter(FederationPeer.domain == domain).first():
+        raise HTTPException(status_code=409, detail="Peer ist bereits konfiguriert")
+
+    try:
+        info = await fetch_instance_info(domain)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Instanz nicht erreichbar oder ungültig: {e}")
+
+    db_peer = FederationPeer(
+        domain=domain,
+        name=peer.name or info.get("instance_id"),
+        public_key=info["public_key"],
+        api_endpoint=info.get("api_endpoint"),
+        approved=True,
+        origin="manual",
+    )
+    db.add(db_peer)
+    db.commit()
+    db.refresh(db_peer)
+    return db_peer
+
+
+@router.post("/peers/{peer_id}/refresh", response_model=PeerResponse)
+async def refresh_peer_key(
+    peer_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Re-fetch and re-pin a peer's public key (e.g. after key rotation)."""
+    from app.services.federation_service import fetch_instance_info
+
+    db_peer = db.query(FederationPeer).filter(FederationPeer.id == peer_id).first()
+    if not db_peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    try:
+        info = await fetch_instance_info(db_peer.domain)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Instanz nicht erreichbar: {e}")
+    db_peer.public_key = info["public_key"]
+    db_peer.api_endpoint = info.get("api_endpoint")
+    db.commit()
+    db.refresh(db_peer)
+    return db_peer
+
+
+@router.put("/peers/{peer_id}", response_model=PeerResponse)
+def update_peer(
+    peer_id: int,
+    update: PeerUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Approve/disable or rename a peer (admin)."""
+    db_peer = db.query(FederationPeer).filter(FederationPeer.id == peer_id).first()
+    if not db_peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    for key, value in update.model_dump(exclude_unset=True).items():
+        setattr(db_peer, key, value)
+    db.commit()
+    db.refresh(db_peer)
+    return db_peer
+
+
+@router.delete("/peers/{peer_id}", status_code=204)
+def delete_peer(
+    peer_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Remove a federation peer (admin)."""
+    db_peer = db.query(FederationPeer).filter(FederationPeer.id == peer_id).first()
+    if not db_peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    db.delete(db_peer)
+    db.commit()
+    return None
+
+
+@router.post("/pair-request", status_code=202)
+async def pair_request(
+    request: Request,
+    db: Session = Depends(get_db),
+    x_instance: str = Header(..., alias="X-Instance"),
+):
+    """Server-to-server: another instance asks to federate with us.
+
+    We fetch and pin the requester's public key over HTTPS (TLS authenticates
+    the domain), but store it as NOT approved – an admin must approve it before
+    any invoices are accepted. This keeps federation explicit, not automatic.
+    """
+    from app.services.federation_service import fetch_instance_info
+
+    if not settings.FEDERATION_ENABLED:
+        raise HTTPException(status_code=403, detail="Federation not enabled")
+
+    domain = _normalize_domain(x_instance)
+    existing = db.query(FederationPeer).filter(FederationPeer.domain == domain).first()
+    if existing:
+        return {"status": existing.approved and "approved" or "pending", "domain": domain}
+
+    try:
+        info = await fetch_instance_info(domain)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Requesting instance unreachable: {e}")
+
+    db.add(FederationPeer(
+        domain=domain,
+        name=info.get("instance_id"),
+        public_key=info["public_key"],
+        api_endpoint=info.get("api_endpoint"),
+        approved=False,
+        origin="request",
+    ))
+    db.commit()
+    return {"status": "pending", "domain": domain, "message": "Pairing request stored; awaiting approval"}

@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.shared_account import SharedAccount, SharedAccountMember
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.user_preference import UserPreference
+from app.models.federation_peer import FederationPeer
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

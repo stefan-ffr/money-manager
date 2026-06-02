@@ -9,6 +9,7 @@ from app.models.backup_code import BackupCode
 from app.models.audit_log import AuditLog
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.user_preference import UserPreference
+from app.models.federation_peer import FederationPeer
 from app.core.database import Base
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "AuditLog",
     "RecurringTransaction",
     "UserPreference",
+    "FederationPeer",
 ]

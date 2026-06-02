@@ -209,8 +209,20 @@ function GeneralSettings() {
 }
 
 // Federation Settings Component
+interface Peer {
+  id: number
+  domain: string
+  name: string | null
+  api_endpoint: string | null
+  approved: boolean
+  origin: string
+}
+
 function FederationSettings() {
-  const [testUrl, setTestUrl] = useState('')
+  const queryClient = useQueryClient()
+  const [newDomain, setNewDomain] = useState('')
+  const [newName, setNewName] = useState('')
+  const [error, setError] = useState('')
 
   const { data: instance } = useQuery({
     queryKey: ['instance'],
@@ -218,6 +230,48 @@ function FederationSettings() {
       const res = await axios.get(`${API_URL}/api/v1/auth/instance`)
       return res.data
     },
+  })
+
+  const { data: peers } = useQuery({
+    queryKey: ['federation-peers'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/federation/peers`)
+      return res.data as Peer[]
+    },
+  })
+
+  const invalidatePeers = () => queryClient.invalidateQueries({ queryKey: ['federation-peers'] })
+
+  const addPeer = useMutation({
+    mutationFn: async () => {
+      await axios.post(`${API_URL}/api/v1/federation/peers`, {
+        domain: newDomain.trim(),
+        name: newName.trim() || null,
+      })
+    },
+    onSuccess: () => { invalidatePeers(); setNewDomain(''); setNewName(''); setError('') },
+    onError: (e: any) => setError(e?.response?.data?.detail || 'Pairing fehlgeschlagen'),
+  })
+
+  const updatePeer = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Peer> }) => {
+      await axios.put(`${API_URL}/api/v1/federation/peers/${id}`, data)
+    },
+    onSuccess: invalidatePeers,
+  })
+
+  const refreshPeer = useMutation({
+    mutationFn: async (id: number) => { await axios.post(`${API_URL}/api/v1/federation/peers/${id}/refresh`) },
+    onSuccess: invalidatePeers,
+  })
+
+  const deletePeer = useMutation({
+    mutationFn: async (id: number) => { await axios.delete(`${API_URL}/api/v1/federation/peers/${id}`) },
+    onSuccess: invalidatePeers,
+  })
+
+  const generateKeys = useMutation({
+    mutationFn: async () => { await axios.post(`${API_URL}/api/v1/settings/generate-federation-keys`) },
   })
 
   return (
@@ -232,32 +286,108 @@ function FederationSettings() {
         <p className="text-sm text-blue-700">Status: {instance?.enabled ? '✅ Aktiviert' : '⏸️ Deaktiviert'}</p>
       </div>
 
+      {/* Approved peers */}
+      <div>
+        <h3 className="font-medium mb-2">Bewilligte Instanzen (Peers)</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          Federation läuft nur mit ausdrücklich bewilligten Instanzen. Beim Hinzufügen wird der
+          Public Key der Gegenstelle über deren HTTPS-Endpunkt geholt und gepinnt.
+        </p>
+
+        <div className="flex flex-wrap items-end gap-2 mb-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Domain</label>
+            <input
+              type="text"
+              value={newDomain}
+              onChange={(e) => setNewDomain(e.target.value)}
+              placeholder="money.example.com"
+              className="w-full rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Name (optional)</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="z. B. Babsy"
+              className="rounded-md border-gray-300 shadow-sm text-sm"
+            />
+          </div>
+          <button
+            onClick={() => newDomain.trim() && addPeer.mutate()}
+            disabled={!newDomain.trim() || addPeer.isPending}
+            className="bg-primary-600 text-white px-3 py-2 rounded text-sm hover:bg-primary-700 disabled:opacity-50"
+          >
+            {addPeer.isPending ? 'Verbinde…' : 'Pairen'}
+          </button>
+        </div>
+        {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Instanz</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500">Status</th>
+                <th className="px-4 py-2 text-right font-medium text-gray-500">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(!peers || peers.length === 0) && (
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">Noch keine Peers konfiguriert.</td></tr>
+              )}
+              {peers?.map((p) => (
+                <tr key={p.id}>
+                  <td className="px-4 py-2">
+                    <div className="font-medium text-gray-900">{p.name || p.domain}</div>
+                    <div className="text-xs text-gray-500">{p.domain}{p.origin === 'request' ? ' · Anfrage' : ''}</div>
+                  </td>
+                  <td className="px-4 py-2">
+                    {p.approved
+                      ? <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Bewilligt</span>
+                      : <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">Ausstehend</span>}
+                  </td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => updatePeer.mutate({ id: p.id, data: { approved: !p.approved } })}
+                      className="text-xs text-primary-600 hover:text-primary-800 mr-3"
+                    >
+                      {p.approved ? 'Sperren' : 'Bewilligen'}
+                    </button>
+                    <button onClick={() => refreshPeer.mutate(p.id)} className="text-xs text-gray-600 hover:text-gray-900 mr-3">
+                      Key erneuern
+                    </button>
+                    <button
+                      onClick={() => { if (confirm(`Peer ${p.domain} entfernen?`)) deletePeer.mutate(p.id) }}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Entfernen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div>
         <h3 className="font-medium mb-2">RSA Key-Pair</h3>
         <p className="text-sm text-gray-600 mb-4">
           Dein Public Key wird über <code>/.well-known/money-instance</code> veröffentlicht
         </p>
-        <button className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+        <button
+          onClick={() => { if (confirm('Neue Schlüssel generieren? Bestehende Federation-Signaturen werden ungültig.')) generateKeys.mutate() }}
+          disabled={generateKeys.isPending}
+          className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 disabled:opacity-50"
+        >
           <Key className="inline w-4 h-4 mr-2" />
-          Neue Keys generieren
+          {generateKeys.isPending ? 'Generiere…' : 'Neue Keys generieren'}
         </button>
+        {generateKeys.isSuccess && <p className="text-xs text-green-600 mt-2">✓ Neue Schlüssel erzeugt. Peers müssen „Key erneuern" ausführen.</p>}
         <p className="text-xs text-gray-500 mt-2">⚠️ Achtung: Alte Signaturen werden ungültig!</p>
-      </div>
-
-      <div>
-        <h3 className="font-medium mb-2">Verbindung testen</h3>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={testUrl}
-            onChange={(e) => setTestUrl(e.target.value)}
-            placeholder="https://money.example.com"
-            className="flex-1 rounded-md border-gray-300 shadow-sm"
-          />
-          <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-            Testen
-          </button>
-        </div>
       </div>
     </div>
   )
