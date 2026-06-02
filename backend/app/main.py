@@ -78,7 +78,7 @@ async def instance_info():
         "instance_id": settings.INSTANCE_DOMAIN,
         "version": VERSION,
         "public_key": get_public_key_pem(),
-        "api_endpoint": f"https://{settings.INSTANCE_DOMAIN}/api/v1",
+        "api_endpoint": f"{settings.FEDERATION_SCHEME}://{settings.INSTANCE_DOMAIN}/api/v1",
         "federation_enabled": settings.FEDERATION_ENABLED,
     }
 

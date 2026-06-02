@@ -17,7 +17,7 @@ async def send_federated_invoice(invoice):
     
     # Get target instance info
     async with httpx.AsyncClient() as client:
-        instance_info = await client.get(f"https://{target_domain}/.well-known/money-instance")
+        instance_info = await client.get(f"{settings.FEDERATION_SCHEME}://{target_domain}/.well-known/money-instance")
         instance_info.raise_for_status()
         instance_data = instance_info.json()
     
@@ -56,7 +56,7 @@ async def verify_invoice_signature(raw_body: str, from_user: str, signature: str
     # Fetch the sender instance's published public key
     async with httpx.AsyncClient() as client:
         try:
-            instance_info = await client.get(f"https://{sender_domain}/.well-known/money-instance")
+            instance_info = await client.get(f"{settings.FEDERATION_SCHEME}://{sender_domain}/.well-known/money-instance")
             instance_info.raise_for_status()
             sender_data = instance_info.json()
         except Exception:
@@ -68,7 +68,7 @@ async def verify_invoice_signature(raw_body: str, from_user: str, signature: str
 async def fetch_instance_public_key(domain: str) -> str:
     """Fetch public key from another instance"""
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"https://{domain}/.well-known/money-instance")
+        response = await client.get(f"{settings.FEDERATION_SCHEME}://{domain}/.well-known/money-instance")
         response.raise_for_status()
         data = response.json()
         return data["public_key"]
@@ -82,7 +82,7 @@ async def fetch_instance_info(domain: str) -> dict:
     returned public key is then pinned by the caller.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(f"https://{domain}/.well-known/money-instance")
+        response = await client.get(f"{settings.FEDERATION_SCHEME}://{domain}/.well-known/money-instance")
         response.raise_for_status()
         data = response.json()
     if "public_key" not in data:
@@ -90,6 +90,6 @@ async def fetch_instance_info(domain: str) -> dict:
     return {
         "instance_id": data.get("instance_id", domain),
         "public_key": data["public_key"],
-        "api_endpoint": data.get("api_endpoint", f"https://{domain}/api/v1"),
+        "api_endpoint": data.get("api_endpoint", f"{settings.FEDERATION_SCHEME}://{domain}/api/v1"),
         "federation_enabled": data.get("federation_enabled", False),
     }

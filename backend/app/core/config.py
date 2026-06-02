@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # Federation
     INSTANCE_DOMAIN: str = "localhost"
     FEDERATION_ENABLED: bool = False
+    # URL scheme for inter-instance calls. "https" in production; "http" only
+    # for trusted internal/CI setups without TLS.
+    FEDERATION_SCHEME: str = "https"
     INSTANCE_PRIVATE_KEY_PATH: str = "/app/secrets/instance_key.pem"
 
     # WebAuthn / Passkeys
