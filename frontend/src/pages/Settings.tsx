@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   Settings as SettingsIcon,
@@ -9,7 +9,12 @@ import {
   Tag,
   Shield,
   Download,
-  Key
+  Key,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -562,12 +567,7 @@ function CategorySettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Kategorie EasyTax Mapping</h2>
-        <button className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-          + Kategorie hinzufügen
-        </button>
-      </div>
+      <h2 className="text-xl font-semibold">Kategorie EasyTax Mapping</h2>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-medium text-blue-900 mb-2">📊 EasyTax Export</h3>
@@ -605,16 +605,197 @@ function CategorySettings() {
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="font-medium mb-2">Standard Kategorien</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-          <div>• Miete & Nebenkosten</div>
-          <div>• Versicherungen</div>
-          <div>• Verpflegung</div>
-          <div>• Transport & Mobilität</div>
-          <div>• Gesundheit</div>
-          <div>• Bildung & Weiterbildung</div>
-        </div>
+      <CategoryManager />
+    </div>
+  )
+}
+
+interface CategoryItem {
+  id: number
+  name: string
+  easytax_code: string | null
+  parent_id: number | null
+}
+
+function CategoryManager() {
+  const queryClient = useQueryClient()
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newCode, setNewCode] = useState('')
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editCode, setEditCode] = useState('')
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/api/v1/categories/`)
+      return res.data as CategoryItem[]
+    },
+  })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; easytax_code: string | null }) => {
+      await axios.post(`${API_URL}/api/v1/categories/`, data)
+    },
+    onSuccess: () => {
+      invalidate()
+      setAdding(false)
+      setNewName('')
+      setNewCode('')
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { name: string; easytax_code: string | null } }) => {
+      await axios.put(`${API_URL}/api/v1/categories/${id}`, data)
+    },
+    onSuccess: () => {
+      invalidate()
+      setEditId(null)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await axios.delete(`${API_URL}/api/v1/categories/${id}`)
+    },
+    onSuccess: invalidate,
+  })
+
+  const startEdit = (cat: CategoryItem) => {
+    setEditId(cat.id)
+    setEditName(cat.name)
+    setEditCode(cat.easytax_code || '')
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium">Kategorien</h3>
+        {!adding && (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-sm bg-primary-600 text-white px-3 py-1.5 rounded hover:bg-primary-700 flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" /> Kategorie hinzufügen
+          </button>
+        )}
+      </div>
+
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left font-medium text-gray-500">Kategorie</th>
+              <th className="px-4 py-2 text-left font-medium text-gray-500">EasyTax-Code</th>
+              <th className="px-4 py-2 text-right font-medium text-gray-500 w-28">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {adding && (
+              <tr className="bg-blue-50">
+                <td className="px-4 py-2">
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Name"
+                    className="w-full rounded border-gray-300 text-sm"
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <input
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    placeholder="z. B. 3100"
+                    className="w-full rounded border-gray-300 text-sm"
+                  />
+                </td>
+                <td className="px-4 py-2 text-right whitespace-nowrap">
+                  <button
+                    onClick={() => newName.trim() && createMutation.mutate({ name: newName.trim(), easytax_code: newCode.trim() || null })}
+                    disabled={!newName.trim() || createMutation.isPending}
+                    className="text-green-600 hover:text-green-800 disabled:opacity-40 mr-2"
+                    title="Speichern"
+                  >
+                    <Check className="w-4 h-4 inline" />
+                  </button>
+                  <button
+                    onClick={() => { setAdding(false); setNewName(''); setNewCode('') }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Abbrechen"
+                  >
+                    <X className="w-4 h-4 inline" />
+                  </button>
+                </td>
+              </tr>
+            )}
+
+            {categories?.map((cat) => (
+              <tr key={cat.id}>
+                {editId === cat.id ? (
+                  <>
+                    <td className="px-4 py-2">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded border-gray-300 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={editCode}
+                        onChange={(e) => setEditCode(e.target.value)}
+                        className="w-full rounded border-gray-300 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => editName.trim() && updateMutation.mutate({ id: cat.id, data: { name: editName.trim(), easytax_code: editCode.trim() || null } })}
+                        disabled={!editName.trim() || updateMutation.isPending}
+                        className="text-green-600 hover:text-green-800 disabled:opacity-40 mr-2"
+                        title="Speichern"
+                      >
+                        <Check className="w-4 h-4 inline" />
+                      </button>
+                      <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600" title="Abbrechen">
+                        <X className="w-4 h-4 inline" />
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-4 py-2 text-gray-900">{cat.name}</td>
+                    <td className="px-4 py-2 text-gray-500">{cat.easytax_code || '–'}</td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <button onClick={() => startEdit(cat)} className="text-primary-600 hover:text-primary-800 mr-2" title="Bearbeiten">
+                        <Pencil className="w-4 h-4 inline" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(`Kategorie „${cat.name}" löschen?`)) deleteMutation.mutate(cat.id) }}
+                        className="text-red-600 hover:text-red-800"
+                        title="Löschen"
+                      >
+                        <Trash2 className="w-4 h-4 inline" />
+                      </button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+
+            {(!categories || categories.length === 0) && !adding && (
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+                  Noch keine Kategorien. Füge deine erste Kategorie hinzu.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
