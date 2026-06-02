@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation, two_factor
+from app.api import accounts, transactions, categories, federation, shared_accounts, settings_api, bank_import, auth, replication, reconciliation, two_factor, recurring
 from app.core.database import engine, SessionLocal
 from app.models import base
 import os
@@ -49,6 +49,7 @@ app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settin
 app.include_router(bank_import.router, prefix="/api/v1/import", tags=["bank-import"])
 app.include_router(replication.router, prefix="/api/v1/replication", tags=["replication"])
 app.include_router(reconciliation.router, prefix="/api/v1", tags=["reconciliation"])
+app.include_router(recurring.router, prefix="/api/v1/recurring", tags=["recurring"])
 
 
 @app.get("/")
@@ -79,6 +80,37 @@ async def instance_info():
         "api_endpoint": f"https://{settings.INSTANCE_DOMAIN}/api/v1",
         "federation_enabled": settings.FEDERATION_ENABLED,
     }
+
+
+# Background Scheduler for recurring transactions (runs once a day)
+@app.on_event("startup")
+async def start_recurring_scheduler():
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    except Exception as e:  # pragma: no cover - scheduler is optional
+        print(f"[Recurring] Scheduler unavailable ({e}); use POST /api/v1/recurring/process manually")
+        return
+
+    from app.services.recurring_service import process_due_recurring
+
+    def run_recurring_job():
+        db = SessionLocal()
+        try:
+            created = process_due_recurring(db)
+            if created:
+                print(f"[Recurring] Created {created} due transaction(s)")
+        except Exception as e:
+            print(f"[Recurring Error] {e}")
+        finally:
+            db.close()
+
+    recurring_scheduler = AsyncIOScheduler()
+    recurring_scheduler.add_job(run_recurring_job, 'interval', hours=24, id='recurring_process', replace_existing=True)
+    # Also run shortly after startup so a restart doesn't skip a day
+    run_recurring_job()
+    recurring_scheduler.start()
+    app.state.recurring_scheduler = recurring_scheduler
+    print("[Recurring] Daily scheduler started")
 
 
 # Background Scheduler for Replication

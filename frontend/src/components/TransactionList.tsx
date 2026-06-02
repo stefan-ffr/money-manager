@@ -124,6 +124,8 @@ function TransactionList() {
       telegram: { color: 'bg-blue-100 text-blue-800', label: 'Telegram' },
       federation: { color: 'bg-purple-100 text-purple-800', label: 'Federation' },
       csv_import: { color: 'bg-green-100 text-green-800', label: 'CSV Import' },
+      recurring: { color: 'bg-amber-100 text-amber-800', label: 'Dauerbuchung' },
+      transfer: { color: 'bg-cyan-100 text-cyan-800', label: 'Umbuchung' },
     }
     const badge = badges[source as keyof typeof badges] || badges.manual
     return (

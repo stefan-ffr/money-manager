@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, CreditCard, ArrowLeftRight, Users, Settings, LogOut, User, GitCompare, Upload } from 'lucide-react'
+import { Home, CreditCard, ArrowLeftRight, Users, Settings, LogOut, User, GitCompare, Upload, Repeat } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 interface LayoutProps {
@@ -19,6 +19,7 @@ function Layout({ children }: LayoutProps) {
     { path: '/shared-accounts', icon: Users, label: 'Gemeinschaft' },
     { path: '/bank-import', icon: Upload, label: 'Bank Import' },
     { path: '/reconciliation', icon: GitCompare, label: 'Abstimmung' },
+    { path: '/recurring', icon: Repeat, label: 'Dauerbuchungen' },
     { path: '/settings', icon: Settings, label: 'Einstellungen' },
   ]
 

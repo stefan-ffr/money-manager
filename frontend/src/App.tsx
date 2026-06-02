@@ -7,6 +7,7 @@ import Transactions from './pages/Transactions'
 import SharedAccounts from './pages/SharedAccounts'
 import BankImport from './pages/BankImport'
 import Reconciliation from './pages/Reconciliation'
+import Recurring from './pages/Recurring'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -33,6 +34,7 @@ function App() {
                 <Route path="/shared-accounts" element={<SharedAccounts />} />
                 <Route path="/bank-import" element={<BankImport />} />
                 <Route path="/reconciliation" element={<Reconciliation />} />
+                <Route path="/recurring" element={<Recurring />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </Layout>
