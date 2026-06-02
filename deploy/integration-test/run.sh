@@ -67,11 +67,16 @@ r=$(curl -fsS -X POST "$A/api/v1/federation/invoice/send" "${AUTH_A[@]}" -H 'Con
   -d '{"to_user":"rolf@backend-b:8000","amount":"12.50","currency":"CHF","description":"e2e","date":"2026-06-02"}')
 assert_eq "$(echo "$r" | jq -r .status)" "pending" "Invoice gesendet & empfangen"
 
-echo "== Federation: Empfang + Annahme + Saldo =="
+echo "== Federation: Empfang + Rote Markierung + Annahme + Saldo =="
 inv=$(curl -fsS "$B/api/v1/transactions/" "${AUTH_B[@]}")
 assert_eq "$(echo "$inv" | jq -r '.[0].source')" "federation" "B hat Federation-Transaktion"
+# FEATURES.md: Auto-Einträge (federation/telegram/csv_import) sind rot markiert.
+assert_eq "$(echo "$inv" | jq -r '.[0].requires_confirmation')" "true" "Auto-Eintrag ist rot markiert (requires_confirmation)"
+assert_eq "$(echo "$inv" | jq -r '.[0].status')" "pending" "Auto-Eintrag ist pending"
 tid=$(echo "$inv" | jq -r '.[0].id')
 curl -fsS -X POST "$B/api/v1/federation/invoice/$tid/accept" "${AUTH_B[@]}" >/dev/null
+after=$(curl -fsS "$B/api/v1/transactions/?limit=1" "${AUTH_B[@]}" | jq -r '.[0] | "\(.status)/\(.requires_confirmation)"')
+assert_eq "$after" "confirmed/false" "Nach Annahme bestätigt & nicht mehr rot"
 bal=$(curl -fsS "$B/api/v1/accounts/" "${AUTH_B[@]}" | jq -r '.[0].balance')
 assert_eq "$bal" "12.50" "rolfs Saldo nach Annahme"
 
