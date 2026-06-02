@@ -276,7 +276,7 @@ async def get_instance_info(domain: str, current_user: User = Depends(get_curren
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"https://{domain}/.well-known/money-instance")
+            response = await client.get(f"{settings.FEDERATION_SCHEME}://{domain}/.well-known/money-instance")
             response.raise_for_status()
             return response.json()
     except Exception as e:
