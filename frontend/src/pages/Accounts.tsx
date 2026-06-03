@@ -400,9 +400,9 @@ function Accounts() {
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 w-28">Datum</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Beschreibung</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Kategorie</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-28">Einnahme</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-28">Ausgabe</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-32">Saldo</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-28">Einnahme ({selectedAccount?.currency})</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-28">Ausgabe ({selectedAccount?.currency})</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-32">Saldo ({selectedAccount?.currency})</th>
                 <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 w-16">Beleg</th>
               </tr>
             </thead>
