@@ -15,7 +15,6 @@ from webauthn import (
 from webauthn.helpers.structs import (
     PublicKeyCredentialDescriptor,
     UserVerificationRequirement,
-    AuthenticatorAttachment,
     AuthenticatorSelectionCriteria,
     ResidentKeyRequirement,
     AttestationConveyancePreference,
@@ -104,7 +103,8 @@ async def begin_registration(
         user_display_name=request.email,
         attestation=AttestationConveyancePreference.NONE,
         authenticator_selection=AuthenticatorSelectionCriteria(
-            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            # No attachment restriction: allow BOTH platform authenticators
+            # (Touch ID / Windows Hello) and roaming security keys (YubiKey/FIDO2).
             resident_key=ResidentKeyRequirement.PREFERRED,
             user_verification=UserVerificationRequirement.PREFERRED,
         ),
