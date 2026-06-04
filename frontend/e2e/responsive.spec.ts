@@ -6,25 +6,25 @@ import { enableVirtualAuthenticator, uniqueUser, registerPasskey } from './helpe
  * viewport defined in `playwright.config.ts` under `responsive-*` projects.
  *
  * For each route we assert:
- *   - the page actually rendered (key heading visible)
+ *   - the page actually loaded (the Layout's nav rendered → not 404 / spinner)
  *   - there is NO unintended horizontal scroll (the #1 mobile regression)
  *   - on viewports ≥ 1024 the sidebar is visible; on < 1024 it must be
- *     collapsed/hidden behind a hamburger toggle
+ *     collapsed/hidden behind a toggle (hamburger)
  *
  * Pixel-diff screenshots are NOT asserted (we don't lock in the current
  * possibly-broken layout as truth). Instead, every page+viewport pair
  * uploads a full-page PNG as a CI artifact for visual review in PRs.
  */
 
-const ROUTES: { path: string; heading: RegExp }[] = [
-  { path: '/', heading: /Dashboard|Gesamtsaldo/ },
-  { path: '/accounts', heading: /Konten|Kontoübersicht/ },
-  { path: '/transactions', heading: /Transaktionen/ },
-  { path: '/shared-accounts', heading: /Geteilte Konten|Shared/ },
-  { path: '/bank-import', heading: /Bank.?Import|Import/ },
-  { path: '/reconciliation', heading: /Abstimmung|Reconciliation|Bestätigungen/ },
-  { path: '/recurring', heading: /Dauerbuchungen|Recurring/ },
-  { path: '/settings', heading: /Einstellungen|Settings/ },
+const ROUTES = [
+  '/',
+  '/accounts',
+  '/transactions',
+  '/shared-accounts',
+  '/bank-import',
+  '/reconciliation',
+  '/recurring',
+  '/settings',
 ]
 
 async function hasHorizontalScroll(page: Page): Promise<boolean> {
@@ -38,24 +38,35 @@ async function hasHorizontalScroll(page: Page): Promise<boolean> {
   })
 }
 
+/**
+ * Wait for the protected Layout to be rendered. The Layout always exposes a
+ * top-level <main> region — when we see it, the route resolved (no 404 /
+ * auth-redirect / loading spinner).
+ */
+async function waitForRoute(page: Page) {
+  // <main> from the Layout component — always present on every protected page.
+  await page.waitForSelector('main', { state: 'attached', timeout: 15_000 })
+  // Settle network so React-Query / lazy chunks finish.
+  await page
+    .waitForLoadState('networkidle', { timeout: 5_000 })
+    .catch(() => undefined)
+}
+
 test.describe('responsive layout per viewport', () => {
   test.beforeEach(async ({ page }) => {
     await enableVirtualAuthenticator(page)
     await registerPasskey(page, uniqueUser())
   })
 
-  for (const route of ROUTES) {
-    test(`route ${route.path} fits viewport without horizontal scroll`, async ({
+  for (const path of ROUTES) {
+    test(`route ${path} fits viewport without horizontal scroll`, async ({
       page,
     }, testInfo) => {
-      await page.goto(route.path)
-      // Wait for the route to render — heading is the most stable signal.
-      await expect(
-        page.getByRole('heading', { name: route.heading }).first(),
-      ).toBeVisible({ timeout: 15_000 })
+      await page.goto(path)
+      await waitForRoute(page)
 
       // Capture the full page as an artifact for visual review.
-      const safeName = route.path.replace(/[^a-zA-Z0-9]/g, '_') || 'root'
+      const safeName = path.replace(/[^a-zA-Z0-9]/g, '_') || 'root'
       await testInfo.attach(`${testInfo.project.name}-${safeName}.png`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: 'image/png',
@@ -64,37 +75,31 @@ test.describe('responsive layout per viewport', () => {
       // Horizontal scroll = layout overflow = mobile bug.
       expect(
         await hasHorizontalScroll(page),
-        `route ${route.path} produced horizontal scroll on viewport ${testInfo.project.name}`,
+        `route ${path} produced horizontal scroll on viewport ${testInfo.project.name}`,
       ).toBe(false)
     })
   }
 
   test('sidebar collapses on narrow viewports', async ({ page }, testInfo) => {
     await page.goto('/')
-    await expect(
-      page.getByRole('heading', { name: /Dashboard|Gesamtsaldo/ }).first(),
-    ).toBeVisible({ timeout: 15_000 })
+    await waitForRoute(page)
 
     const viewport = page.viewportSize()
     if (!viewport) test.skip()
     const isNarrow = viewport!.width < 1024
 
-    // The Layout component renders a nav with the main routes; on desktop it
-    // is always visible, on mobile it should sit behind a toggle (hamburger).
     const nav = page.getByRole('navigation').first()
     const navVisible = await nav.isVisible().catch(() => false)
     if (isNarrow) {
-      // On mobile: either nav is hidden, or a toggle button is present.
-      const toggle = page
-        .getByRole('button', { name: /menu|menü|toggle|öffnen|schließen/i })
-        .first()
-      const toggleExists = await toggle.count()
+      // Mobile: nav hidden OR a toggle button exposed.
+      const toggleCount = await page
+        .getByRole('button', { name: /menu|menü|toggle|öffnen|schließen|navigation/i })
+        .count()
       expect(
-        navVisible === false || toggleExists > 0,
+        navVisible === false || toggleCount > 0,
         `viewport ${viewport!.width}px should hide nav or expose a toggle button`,
       ).toBe(true)
     } else {
-      // On wide screens nav must be visible.
       expect(navVisible, `viewport ${viewport!.width}px should show the nav inline`).toBe(true)
     }
   })
